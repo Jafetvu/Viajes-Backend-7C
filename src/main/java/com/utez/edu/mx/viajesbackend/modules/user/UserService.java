@@ -33,7 +33,8 @@ public class UserService {
                 u.getEmail(),
                 u.getRol(),
                 u.getUsername(),
-                u.getPhoneNumber()
+                u.getPhoneNumber(),
+                u.isStatus()
         );
     }
 
@@ -71,6 +72,8 @@ public class UserService {
         }
 
     }
+
+
     @Transactional(rollbackFor = {SQLException.class, Exception.class})
     public ResponseEntity<?> save(User user){
         try{
@@ -83,10 +86,15 @@ public class UserService {
                 return customResponseEntity.get400Response("No se puede ocupar este teléfono");
             }
 
-            // Generar username automáticamente (sin normalizar email/phone)
+            // Generar username automáticamente
             String baseUsername = buildBaseUsername(user.getName(), user.getSurname(), user.getLastname());
             String uniqueUsername = ensureUniqueUsername(baseUsername);
             user.setUsername(uniqueUsername);
+
+            // Estado automático según rol
+            // Si el rol es 3 (ROLE_DRIVER) => status = false; en otro caso => true
+            int rolId = (user.getRol() != null) ? user.getRol().getId() : -1;
+            user.setStatus(rolId == 3 ? false : true);
 
             userRepository.save(user);
             return customResponseEntity.getOkResponse("Usuario guaradado correctamente", "ok", 200, null);
@@ -96,6 +104,7 @@ public class UserService {
             return customResponseEntity.get400Response("BAD_REQUEST");
         }
     }
+
 
     @Transactional(rollbackFor = {SQLException.class, Exception.class})
     public ResponseEntity<?> update(User user) {
@@ -123,8 +132,7 @@ public class UserService {
             // Asegura que el id se mantenga (por si llega nulo en el body)
             user.setId(found.getId());
 
-            //Se pone el status en true cuando es usuario cliente
-            user.setStatus(true);
+
 
             // (Opcional) Si permites actualizar nombre/apellidos y quieres
             // mantener username en sync solo al crear, no toques username aquí.

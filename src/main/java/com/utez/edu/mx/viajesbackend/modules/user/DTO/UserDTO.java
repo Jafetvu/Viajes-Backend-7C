@@ -7,9 +7,10 @@ public class UserDTO {
 
     private long id;
     private String name, surname, lastname, email, username, phoneNumber;
+    private boolean status;
     private Rol rol;
 
-    public UserDTO(long id, String name, String surname, String lastname, String email, Rol rol, String username, String phoneNumber) {
+    public UserDTO(long id, String name, String surname, String lastname, String email, Rol rol, String username, String phoneNumber, boolean status) {
         this.id = id;
         this.name = name;
         this.surname = surname;
@@ -17,6 +18,7 @@ public class UserDTO {
         this.email = email;
         this.username = username;
         this.phoneNumber = phoneNumber;
+        this.status = status;
         this.rol = rol;
     }
 
@@ -85,5 +87,13 @@ public class UserDTO {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public boolean isStatus() {
+        return status;
+    }
+
+    public void setStatus(boolean status) {
+        this.status = status;
     }
 }
