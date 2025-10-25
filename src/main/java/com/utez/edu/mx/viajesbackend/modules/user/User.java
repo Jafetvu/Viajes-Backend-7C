@@ -43,12 +43,26 @@ public class User {
     @Column(name = "lastname")
     private String lastname;
 
+    //Campo de username
+    @NotBlank(message = "El nombre de usuario es obligatorio")
+    @Column(name= "username", nullable = false)
+    private String username;
+
 
     //Campo de correo electronico
     @NotBlank(message = "El correo electrónico es obligatorio")
     @Email(message = "El correo no tiene un formato válido")
     @Column(name = "email", nullable = false, unique = true)
     private String email;
+
+    //Campo de número de celular
+    @NotBlank(message = "El número telefónico es obligatorio")
+    @Pattern(
+            regexp = "^[0-9]{10}$",
+            message = "El número telefónico debe tener exactamente 10 dígitos"
+    )
+    @Column(name = "phone_number", nullable = false, unique = true)
+    private String phoneNumber;
 
     //Campo de contraseña
     @Column(name= "password", nullable = false)
@@ -69,16 +83,18 @@ public class User {
     //Constructores
     public User() {}
 
-    public User(String name, String surname, String lastname, String email, String password, boolean status) {
+    public User(String name, String surname, String lastname, String email, String password, boolean status, String phoneNumber, String username) {
         this.name = name;
         this.surname = surname;
         this.lastname = lastname;
         this.email = email;
         this.password = password;
         this.status = status;
+        this.phoneNumber = phoneNumber;
+        this.username = username;
     }
 
-    public User(long id, String name, String surname, String lastname, String email, String password, boolean status) {
+    public User(long id, String name, String surname, String lastname, String email, String password, boolean status, String phoneNumber, String username) {
         this.id = id;
         this.name = name;
         this.surname = surname;
@@ -86,9 +102,11 @@ public class User {
         this.email = email;
         this.password = password;
         this.status = status;
+        this.phoneNumber = phoneNumber;
+        this.username = username;
     }
 
-    public User(String name, String surname, String lastname, String email, Rol rol, String password, boolean status) {
+    public User(String name, String surname, String lastname, String email, Rol rol, String password, boolean status, String phoneNumber, String username) {
         this.name = name;
         this.surname = surname;
         this.lastname = lastname;
@@ -96,17 +114,21 @@ public class User {
         this.rol = rol;
         this.password = password;
         this.status = status;
+        this.username= username;
+        this.phoneNumber = phoneNumber;
     }
 
-    public User(long id, String name, String surname, String lastname, String email, String password, boolean status, Rol rol) {
+    public User(long id, String name, String surname, String lastname, String email, String password, boolean status, Rol rol, String phoneNumber, String username) {
         this.id = id;
         this.name = name;
         this.surname = surname;
         this.lastname = lastname;
         this.email = email;
+        this.phoneNumber = phoneNumber;
         this.password = password;
         this.status = status;
         this.rol = rol;
+        this.username= username;
     }
 
 
@@ -152,6 +174,14 @@ public class User {
         this.email = email;
     }
 
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
     public String getPassword() {
         return password;
     }
@@ -174,5 +204,14 @@ public class User {
 
     public void setRol(Rol rol) {
         this.rol = rol;
+    }
+
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 }

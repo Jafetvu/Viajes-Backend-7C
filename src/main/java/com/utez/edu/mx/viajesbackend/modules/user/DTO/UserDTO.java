@@ -6,15 +6,17 @@ import com.utez.edu.mx.viajesbackend.modules.role.Rol;
 public class UserDTO {
 
     private long id;
-    private String name, surname, lastname, email;
+    private String name, surname, lastname, email, username, phoneNumber;
     private Rol rol;
 
-    public UserDTO(long id, String name, String surname, String lastname, String email, Rol rol) {
+    public UserDTO(long id, String name, String surname, String lastname, String email, Rol rol, String username, String phoneNumber) {
         this.id = id;
         this.name = name;
         this.surname = surname;
         this.lastname = lastname;
         this.email = email;
+        this.username = username;
+        this.phoneNumber = phoneNumber;
         this.rol = rol;
     }
 
@@ -67,5 +69,21 @@ public class UserDTO {
 
     public void setRol(Rol rol) {
         this.rol = rol;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 }

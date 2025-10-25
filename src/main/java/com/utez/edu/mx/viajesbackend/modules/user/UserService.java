@@ -31,7 +31,9 @@ public class UserService {
                 u.getSurname(),
                 u.getLastname(),
                 u.getEmail(),
-                u.getRol()
+                u.getRol(),
+                u.getUsername(),
+                u.getPhoneNumber()
         );
     }
 
@@ -69,25 +71,29 @@ public class UserService {
         }
 
     }
-
-    //Guardar usuarios
     @Transactional(rollbackFor = {SQLException.class, Exception.class})
     public ResponseEntity<?> save(User user){
         try{
-            //Verficar si el correo ya existe
-            if(userRepository.existsByEmail(user.getEmail())){
+            // Unicidad de email
+            if (userRepository.existsByEmail(user.getEmail())) {
                 return customResponseEntity.get400Response("No se puede ocupar este correo");
-
             }
+            // Unicidad de teléfono
+            if (userRepository.existsByPhoneNumber(user.getPhoneNumber())) {
+                return customResponseEntity.get400Response("No se puede ocupar este teléfono");
+            }
+
+            // Generar username automáticamente (sin normalizar email/phone)
+            String baseUsername = buildBaseUsername(user.getName(), user.getSurname(), user.getLastname());
+            String uniqueUsername = ensureUniqueUsername(baseUsername);
+            user.setUsername(uniqueUsername);
 
             userRepository.save(user);
             return customResponseEntity.getOkResponse("Usuario guaradado correctamente", "ok", 200, null);
 
-
-        }catch(Exception e){
+        } catch(Exception e){
             e.printStackTrace();
             return customResponseEntity.get400Response("BAD_REQUEST");
-
         }
     }
 
@@ -98,14 +104,14 @@ public class UserService {
             return customResponseEntity.get404Response();
         }
 
-        // Normaliza por si vienen espacios o mayúsculas
-        String newEmail = user.getEmail() == null ? null : user.getEmail().trim();
-        String currentEmail = found.getEmail() == null ? null : found.getEmail().trim();
-
-        boolean emailChanged = newEmail != null && !newEmail.equalsIgnoreCase(currentEmail);
-
-        if (emailChanged && userRepository.existsByEmail(newEmail)) {
+        // Permite el mismo email/teléfono del propio usuario, rechaza si es de otro
+        if (user.getEmail() != null &&
+                userRepository.existsByEmailAndIdNot(user.getEmail(), user.getId())) {
             return customResponseEntity.get400Response("No se puede actualizar este correo");
+        }
+        if (user.getPhoneNumber() != null &&
+                userRepository.existsByPhoneNumberAndIdNot(user.getPhoneNumber(), user.getId())) {
+            return customResponseEntity.get400Response("No se puede actualizar este teléfono");
         }
 
         try {
@@ -117,6 +123,13 @@ public class UserService {
             // Asegura que el id se mantenga (por si llega nulo en el body)
             user.setId(found.getId());
 
+            //Se pone el status en true cuando es usuario cliente
+            user.setStatus(true);
+
+            // (Opcional) Si permites actualizar nombre/apellidos y quieres
+            // mantener username en sync solo al crear, no toques username aquí.
+            // Si quisieras recalcularlo en update, hazlo con cautela por colisiones.
+
             userRepository.save(user);
             return customResponseEntity.getOkResponse("Usuario modificado correctamente", "ok", 200, null);
         } catch (Exception e) {
@@ -124,6 +137,63 @@ public class UserService {
             return customResponseEntity.get400Response("BAD_REQUEST");
         }
     }
+
+    /* ===== Helpers para username (no tocan email/phone) ===== */
+
+    private String buildBaseUsername(String name, String surname, String lastname) {
+        String firstName = firstToken(name);
+        String firstSurname = firstToken(surname);
+        String firstLastName = firstToken(lastname);
+
+        StringBuilder sb = new StringBuilder();
+        if (!firstName.isEmpty()) sb.append(firstName.toLowerCase());
+        if (!firstSurname.isEmpty()) {
+            if (sb.length() > 0) sb.append(".");
+            sb.append(firstSurname.toLowerCase());
+        }
+        if (!firstLastName.isEmpty()) {
+            if (sb.length() > 0) sb.append(".");
+            sb.append(firstLastName.toLowerCase());
+        }
+
+        String slug = slugify(sb.toString());
+        if (slug.isEmpty()) slug = "user";
+        if (slug.length() > 30) slug = slug.substring(0, 30);
+        return slug;
+    }
+
+    private String ensureUniqueUsername(String base) {
+        String candidate = base;
+        int suffix = 2;
+        while (userRepository.existsByUsername(candidate)) {
+            String next = base + suffix;
+            if (next.length() > 30) {
+                int maxBase = Math.max(1, 30 - String.valueOf(suffix).length());
+                next = base.substring(0, Math.min(base.length(), maxBase)) + suffix;
+            }
+            candidate = next;
+            suffix++;
+        }
+        return candidate;
+    }
+
+    private String firstToken(String s) {
+        if (s == null) return "";
+        String trimmed = s.trim();
+        if (trimmed.isEmpty()) return "";
+        String token = trimmed.split("\\s+")[0];
+        return slugify(token);
+    }
+
+    private String slugify(String input) {
+        if (input == null) return "";
+        String n = java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD);
+        String noAccents = n.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        // Permite solo letras, números y puntos para username
+        return noAccents.replaceAll("[^A-Za-z0-9.]", "");
+    }
+
+
 
 
     //Eliminar usuarios
