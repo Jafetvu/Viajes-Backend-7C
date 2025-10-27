@@ -1,5 +1,12 @@
 package com.utez.edu.mx.viajesbackend.modules.driver;
 
+import com.utez.edu.mx.viajesbackend.modules.driver.Documents.DriverDocument;
+import com.utez.edu.mx.viajesbackend.modules.driver.Documents.DriverDocumentRepository;
+import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverAvailability;
+import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfile;
+import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfileRepository;
+import com.utez.edu.mx.viajesbackend.modules.driver.Vehicle.Vehicle;
+import com.utez.edu.mx.viajesbackend.modules.driver.Vehicle.VehicleRepository;
 import com.utez.edu.mx.viajesbackend.modules.user.User;
 import com.utez.edu.mx.viajesbackend.modules.user.UserRepository;
 import com.utez.edu.mx.viajesbackend.utils.CustomResponseEntity;
@@ -8,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
-import java.util.Optional;
 
 @Service
 public class DriverProfileService {
@@ -111,6 +117,46 @@ public class DriverProfileService {
         userRepository.save(user);
         return customResponseEntity.getOkResponse("Chofer suspendido", "ok", 200, null);
     }
+
+
+    /** Cambiar disponibilidad del chofer a DISPONIBLE */
+    @Transactional(rollbackOn = {SQLException.class, Exception.class})
+    public ResponseEntity<?> setAvailable(Long driverId) {
+        DriverProfile dp = driverProfileRepository.findById(driverId).orElse(null);
+        if (dp == null) return customResponseEntity.get404Response();
+
+        User user = dp.getUser();
+        if (!canOperateAsDriver(user)) {
+            return customResponseEntity.get400Response("El chofer no puede operar actualmente");
+        }
+
+        dp.setAvailability(DriverAvailability.DISPONIBLE);
+        driverProfileRepository.save(dp);
+        return customResponseEntity.getOkResponse(
+                "El chofer ahora está DISPONIBLE",
+                "ok", 200, null
+        );
+    }
+
+    /** Cambiar disponibilidad del chofer a FUERA_DE_SERVICIO */
+    @Transactional(rollbackOn = {SQLException.class, Exception.class})
+    public ResponseEntity<?> setOffline(Long driverId) {
+        DriverProfile dp = driverProfileRepository.findById(driverId).orElse(null);
+        if (dp == null) return customResponseEntity.get404Response();
+
+        User user = dp.getUser();
+        if (!canOperateAsDriver(user)) {
+            return customResponseEntity.get400Response("El chofer no puede operar actualmente");
+        }
+
+        dp.setAvailability(DriverAvailability.FUERA_DE_SERVICIO);
+        driverProfileRepository.save(dp);
+        return customResponseEntity.getOkResponse(
+                "El chofer ahora está FUERA DE SERVICIO",
+                "ok", 200, null
+        );
+    }
+
 
     /** Regla de negocio rápida: ¿puede operar como chofer? */
     public boolean canOperateAsDriver(User user) {

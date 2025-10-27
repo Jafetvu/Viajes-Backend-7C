@@ -1,4 +1,4 @@
-package com.utez.edu.mx.viajesbackend.modules.driver;
+package com.utez.edu.mx.viajesbackend.modules.driver.Documents;
 
 
 public enum DriverDocType {

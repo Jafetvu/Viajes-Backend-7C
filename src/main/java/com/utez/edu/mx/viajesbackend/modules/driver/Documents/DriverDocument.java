@@ -1,5 +1,6 @@
-package com.utez.edu.mx.viajesbackend.modules.driver;
+package com.utez.edu.mx.viajesbackend.modules.driver.Documents;
 
+import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfile;
 import jakarta.persistence.*;
 
 @Entity

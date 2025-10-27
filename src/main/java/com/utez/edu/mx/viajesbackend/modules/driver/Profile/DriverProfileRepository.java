@@ -1,4 +1,4 @@
-package com.utez.edu.mx.viajesbackend.modules.driver;
+package com.utez.edu.mx.viajesbackend.modules.driver.Profile;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

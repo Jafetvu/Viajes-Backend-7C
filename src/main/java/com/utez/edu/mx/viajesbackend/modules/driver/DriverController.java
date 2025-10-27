@@ -1,5 +1,11 @@
 package com.utez.edu.mx.viajesbackend.modules.driver;
 
+import com.utez.edu.mx.viajesbackend.modules.driver.Documents.DriverDocument;
+import com.utez.edu.mx.viajesbackend.modules.driver.Documents.DriverDocumentRepository;
+import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfile;
+import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfileRepository;
+import com.utez.edu.mx.viajesbackend.modules.driver.Vehicle.Vehicle;
+import com.utez.edu.mx.viajesbackend.modules.driver.Vehicle.VehicleRepository;
 import com.utez.edu.mx.viajesbackend.modules.user.User;
 import com.utez.edu.mx.viajesbackend.modules.user.UserRepository;
 import jakarta.transaction.Transactional;
@@ -197,6 +203,18 @@ public class DriverController {
             out.add(m);
         }
         return out;
+    }
+
+    /** Cambiar chofer a disponible */
+    @PutMapping("/{id}/available")
+    public ResponseEntity<?> setDriverAvailable(@PathVariable Long id) {
+        return driverProfileService.setAvailable(id);
+    }
+
+    /** Cambiar chofer a fuera de servicio */
+    @PutMapping("/{id}/offline")
+    public ResponseEntity<?> setDriverOffline(@PathVariable Long id) {
+        return driverProfileService.setOffline(id);
     }
 }
 

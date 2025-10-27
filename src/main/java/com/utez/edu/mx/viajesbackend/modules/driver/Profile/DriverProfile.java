@@ -1,6 +1,8 @@
-package com.utez.edu.mx.viajesbackend.modules.driver;
+package com.utez.edu.mx.viajesbackend.modules.driver.Profile;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.utez.edu.mx.viajesbackend.modules.driver.Documents.DriverDocument;
+import com.utez.edu.mx.viajesbackend.modules.driver.Vehicle.Vehicle;
 import com.utez.edu.mx.viajesbackend.modules.user.User;
 import jakarta.persistence.*;
 import java.util.ArrayList;
@@ -13,7 +15,9 @@ import java.util.List;
                 @UniqueConstraint(columnNames = {"license_number"})
         })
 public class DriverProfile {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @OneToOne(optional = false)
@@ -30,6 +34,11 @@ public class DriverProfile {
     @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DriverDocument> documents = new ArrayList<>();
 
+    // Nuevo campo de disponibilidad
+    @Enumerated(EnumType.STRING)
+    @Column(name = "availability", nullable = false, length = 30)
+    private DriverAvailability availability = DriverAvailability.DISPONIBLE;
+
     // getters/setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -45,4 +54,7 @@ public class DriverProfile {
 
     public List<DriverDocument> getDocuments() { return documents; }
     public void setDocuments(List<DriverDocument> documents) { this.documents = documents; }
+
+    public DriverAvailability getAvailability() { return availability; }
+    public void setAvailability(DriverAvailability availability) { this.availability = availability; }
 }
