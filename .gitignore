@@ -15,6 +15,7 @@ target/
 
 ### IntelliJ IDEA ###
 .idea
+.cursor/
 *.iws
 *.iml
 *.ipr
