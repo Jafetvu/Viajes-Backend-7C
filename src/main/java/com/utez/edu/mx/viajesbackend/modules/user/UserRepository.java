@@ -7,21 +7,20 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    List<User> findAll();
-
-    User findById(long idUser);
-
-    User save(User user);
+    Optional<User> findById(long idUser);
 
     // Eliminar usuario
     @Modifying
     @Query(value = "DELETE FROM user WHERE id = :idUser", nativeQuery = true)
     void deleteById(@Param("idUser") long idUser);
 
-    User findByEmail(String email);
+    Optional<User> findByEmail(String email);
+
+    Optional<User> findByUsername(String username);
 
     boolean existsByEmail(String email);
 
@@ -34,7 +33,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByPhoneNumberAndIdNot(String phoneNumber, long id);
 
     // Choferes pendientes: rol id=3 y status=false
-    @Query("select u from User u where u.rol.id = 3 and u.status = false")
+    @Query("select u from User u where u.role.id = 3 and u.status = false")
     List<User> findPendingDrivers();
 
 }

@@ -10,73 +10,69 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserService {
 
-
     @Autowired
     private UserRepository userRepository;
-
 
     @Autowired
     private CustomResponseEntity customResponseEntity;
 
-
-    //UserDTO para mostrar solamente ciertos datos en las consultas
-    public UserDTO transformUserToDTO(User u){
+    // UserDTO para mostrar solamente ciertos datos en las consultas
+    public UserDTO transformUserToDTO(User u) {
         return new UserDTO(
                 u.getId(),
                 u.getName(),
                 u.getSurname(),
                 u.getLastname(),
                 u.getEmail(),
-                u.getRol(),
+                u.getRole(),
                 u.getUsername(),
                 u.getPhoneNumber(),
-                u.isStatus()
-        );
+                u.isStatus());
     }
 
-
-    //Buscar a todos los usuarios
+    // Buscar a todos los usuarios
     @Transactional(readOnly = true)
-    public ResponseEntity<?> findAll(){
+    public ResponseEntity<?> findAll() {
         List<UserDTO> list = new ArrayList<>();
         String message = "";
 
-        if(userRepository.findAll().isEmpty()){
+        if (userRepository.findAll().isEmpty()) {
             message = "No hay usuarios registrados";
-        }else {
+        } else {
             message = "Usuarios encontrados";
-            for(User u : userRepository.findAll()){
+            for (User u : userRepository.findAll()) {
                 list.add(transformUserToDTO(u));
             }
         }
-        return customResponseEntity.getOkResponse(message,"ok",200, list);
+        return customResponseEntity.getOkResponse(message, "ok", 200, list);
     }
 
-    //Buscar usuario por id
+    // Buscar usuario por id
     @Transactional(readOnly = true)
-    public ResponseEntity<?> findById(Long idUser){
-        UserDTO dto = null;
-        User found = userRepository.findById(idUser).orElse(null);
-        String message = "";
-
-        if(found == null){
-            return customResponseEntity.get404Response();
-        }else{
-            message = "Usuario encontrado";
-            dto = transformUserToDTO(found);
-            return customResponseEntity.getOkResponse(message,"ok",200, dto);
+    public ResponseEntity<?> findById(Long idUser) {
+        if (idUser == null || idUser <= 0) {
+            return customResponseEntity.get400Response("ID de usuario inválido");
         }
 
+        Optional<User> optionalUser = userRepository.findById(idUser);
+
+        if (optionalUser.isEmpty()) {
+            return customResponseEntity.get404Response();
+        }
+
+        User found = optionalUser.get();
+        UserDTO dto = transformUserToDTO(found);
+        return customResponseEntity.getOkResponse("Usuario encontrado", "ok", 200, dto);
     }
 
-
-    @Transactional(rollbackFor = {SQLException.class, Exception.class})
-    public ResponseEntity<?> save(User user){
-        try{
+    @Transactional(rollbackFor = { SQLException.class, Exception.class })
+    public ResponseEntity<?> save(User user) {
+        try {
             // Unicidad de email
             if (userRepository.existsByEmail(user.getEmail())) {
                 return customResponseEntity.get400Response("No se puede ocupar este correo");
@@ -93,25 +89,26 @@ public class UserService {
 
             // Estado automático según rol
             // Si el rol es 3 (ROLE_DRIVER) => status = false; en otro caso => true
-            int rolId = (user.getRol() != null) ? user.getRol().getId() : -1;
+            int rolId = (user.getRole() != null) ? user.getRole().getId() : -1;
             user.setStatus(rolId == 3 ? false : true);
 
             userRepository.save(user);
             return customResponseEntity.getOkResponse("Usuario guaradado correctamente", "ok", 200, null);
 
-        } catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             return customResponseEntity.get400Response("BAD_REQUEST");
         }
     }
 
-
-    @Transactional(rollbackFor = {SQLException.class, Exception.class})
+    @Transactional(rollbackFor = { SQLException.class, Exception.class })
     public ResponseEntity<?> update(User user) {
-        User found = userRepository.findById(user.getId());
-        if (found == null) {
+        Optional<User> optionalFound = userRepository.findById(user.getId());
+        if (optionalFound.isEmpty()) {
             return customResponseEntity.get404Response();
         }
+
+        User found = optionalFound.get();
 
         // Permite el mismo email/teléfono del propio usuario, rechaza si es de otro
         if (user.getEmail() != null &&
@@ -131,8 +128,6 @@ public class UserService {
 
             // Asegura que el id se mantenga (por si llega nulo en el body)
             user.setId(found.getId());
-
-
 
             // (Opcional) Si permites actualizar nombre/apellidos y quieres
             // mantener username en sync solo al crear, no toques username aquí.
@@ -154,19 +149,24 @@ public class UserService {
         String firstLastName = firstToken(lastname);
 
         StringBuilder sb = new StringBuilder();
-        if (!firstName.isEmpty()) sb.append(firstName.toLowerCase());
+        if (!firstName.isEmpty())
+            sb.append(firstName.toLowerCase());
         if (!firstSurname.isEmpty()) {
-            if (sb.length() > 0) sb.append(".");
+            if (sb.length() > 0)
+                sb.append(".");
             sb.append(firstSurname.toLowerCase());
         }
         if (!firstLastName.isEmpty()) {
-            if (sb.length() > 0) sb.append(".");
+            if (sb.length() > 0)
+                sb.append(".");
             sb.append(firstLastName.toLowerCase());
         }
 
         String slug = slugify(sb.toString());
-        if (slug.isEmpty()) slug = "user";
-        if (slug.length() > 30) slug = slug.substring(0, 30);
+        if (slug.isEmpty())
+            slug = "user";
+        if (slug.length() > 30)
+            slug = slug.substring(0, 30);
         return slug;
     }
 
@@ -186,37 +186,38 @@ public class UserService {
     }
 
     private String firstToken(String s) {
-        if (s == null) return "";
+        if (s == null)
+            return "";
         String trimmed = s.trim();
-        if (trimmed.isEmpty()) return "";
+        if (trimmed.isEmpty())
+            return "";
         String token = trimmed.split("\\s+")[0];
         return slugify(token);
     }
 
     private String slugify(String input) {
-        if (input == null) return "";
+        if (input == null)
+            return "";
         String n = java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD);
         String noAccents = n.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
         // Permite solo letras, números y puntos para username
         return noAccents.replaceAll("[^A-Za-z0-9.]", "");
     }
 
-
-
-
-    //Eliminar usuarios
-    @Transactional(rollbackFor = {SQLException.class, Exception.class})
-    public ResponseEntity<?> deleteById(User user){
-        if(userRepository.findById(user.getId()) == null){
+    // Eliminar usuarios
+    @Transactional(rollbackFor = { SQLException.class, Exception.class })
+    public ResponseEntity<?> deleteById(User user) {
+        Optional<User> optionalUser = userRepository.findById(user.getId());
+        if (optionalUser.isEmpty()) {
             return customResponseEntity.get404Response();
-        }else{
-            try{
-                userRepository.deleteById(user.getId());
-                return customResponseEntity.getOkResponse("Usuario eliminado correctamente", "ok", 200, null);
-            }catch(Exception e){
-                e.printStackTrace();
-                return customResponseEntity.get400Response("BAD_REQUEST");
-            }
+        }
+
+        try {
+            userRepository.deleteById(user.getId());
+            return customResponseEntity.getOkResponse("Usuario eliminado correctamente", "ok", 200, null);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return customResponseEntity.get400Response("BAD_REQUEST");
         }
     }
 

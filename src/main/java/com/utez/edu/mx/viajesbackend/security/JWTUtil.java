@@ -35,16 +35,7 @@ public class JWTUtil {
                 .getBody();
             return resolver.apply(claims);
         } catch (JwtException e) {
-            try {
-                Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(keyService.getKey())
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
-                return resolver.apply(claims);
-            } catch (JwtException err) {
-                throw err;
-            }
+            throw e;
         }
     }
 

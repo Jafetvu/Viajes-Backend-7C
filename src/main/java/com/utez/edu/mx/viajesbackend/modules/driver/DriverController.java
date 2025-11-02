@@ -109,7 +109,7 @@ public class DriverController {
     public ResponseEntity<?> getFullDriverInfo(@PathVariable Long userId) {
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) return ResponseEntity.status(404).body("Usuario no encontrado");
-        if (user.getRol() == null || user.getRol().getId() != ROLE_DRIVER_ID) {
+        if (user.getRole() == null || user.getRole().getId() != ROLE_DRIVER_ID) {
             return ResponseEntity.badRequest().body("El usuario no tiene rol de chofer");
         }
 
@@ -162,8 +162,8 @@ public class DriverController {
         m.put("email", u.getEmail());
         m.put("phoneNumber", u.getPhoneNumber());
         m.put("status", u.isStatus());
-        m.put("roleId", u.getRol() != null ? u.getRol().getId() : null);
-        m.put("roleName", u.getRol() != null ? u.getRol().getName() : null);
+        m.put("roleId", u.getRole() != null ? u.getRole().getId() : null);
+        m.put("roleName", u.getRole() != null ? u.getRole().getName() : null);
         return m;
     }
 

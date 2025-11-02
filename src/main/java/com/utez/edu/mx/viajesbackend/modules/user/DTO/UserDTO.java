@@ -1,6 +1,6 @@
 package com.utez.edu.mx.viajesbackend.modules.user.DTO;
 
-import com.utez.edu.mx.viajesbackend.modules.role.Rol;
+import com.utez.edu.mx.viajesbackend.modules.role.Role;
 
 // DATA TRANSFER OBJECT (DTO): PLANTILLA DE TRANSFERENCIA PARA RECUPERAR USUARIOS
 public class UserDTO {
@@ -8,9 +8,9 @@ public class UserDTO {
     private long id;
     private String name, surname, lastname, email, username, phoneNumber;
     private boolean status;
-    private Rol rol;
+    private Role role;
 
-    public UserDTO(long id, String name, String surname, String lastname, String email, Rol rol, String username, String phoneNumber, boolean status) {
+    public UserDTO(long id, String name, String surname, String lastname, String email, Role role, String username, String phoneNumber, boolean status) {
         this.id = id;
         this.name = name;
         this.surname = surname;
@@ -19,7 +19,7 @@ public class UserDTO {
         this.username = username;
         this.phoneNumber = phoneNumber;
         this.status = status;
-        this.rol = rol;
+        this.role = role;
     }
 
 
@@ -65,12 +65,12 @@ public class UserDTO {
         this.email = email;
     }
 
-    public Rol getRol() {
-        return rol;
+    public Role getRole() {
+        return role;
     }
 
-    public void setRol(Rol rol) {
-        this.rol = rol;
+    public void setRol(Role rol) {
+        this.role = rol;
     }
 
     public String getUsername() {

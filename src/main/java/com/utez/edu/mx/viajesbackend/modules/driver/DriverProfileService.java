@@ -45,7 +45,7 @@ public class DriverProfileService {
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) return customResponseEntity.get404Response();
 
-        if (user.getRol() == null || user.getRol().getId() != ROLE_DRIVER_ID) {
+        if (user.getRole() == null || user.getRole().getId() != ROLE_DRIVER_ID) {
             return customResponseEntity.get400Response("El usuario no tiene rol de chofer");
         }
         if (driverProfileRepository.existsByUserId(userId)) {
@@ -92,7 +92,7 @@ public class DriverProfileService {
     public ResponseEntity<?> approveDriver(Long userId) {
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) return customResponseEntity.get404Response();
-        if (user.getRol() == null || user.getRol().getId() != ROLE_DRIVER_ID) {
+        if (user.getRole() == null || user.getRole().getId() != ROLE_DRIVER_ID) {
             return customResponseEntity.get400Response("El usuario no tiene rol de chofer");
         }
         if (!driverProfileRepository.existsByUserId(userId)) {
@@ -109,7 +109,7 @@ public class DriverProfileService {
     public ResponseEntity<?> suspendDriver(Long userId) {
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) return customResponseEntity.get404Response();
-        if (user.getRol() == null || user.getRol().getId() != ROLE_DRIVER_ID) {
+        if (user.getRole() == null || user.getRole().getId() != ROLE_DRIVER_ID) {
             return customResponseEntity.get400Response("El usuario no tiene rol de chofer");
         }
 
@@ -161,8 +161,8 @@ public class DriverProfileService {
     /** Regla de negocio rápida: ¿puede operar como chofer? */
     public boolean canOperateAsDriver(User user) {
         return user != null
-                && user.getRol() != null
-                && user.getRol().getId() == ROLE_DRIVER_ID
+                && user.getRole() != null
+                && user.getRole().getId() == ROLE_DRIVER_ID
                 && user.isStatus(); // status true en User
     }
 }

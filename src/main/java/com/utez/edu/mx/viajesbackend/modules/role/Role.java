@@ -7,47 +7,47 @@ import jakarta.persistence.*;
 import java.util.List;
 
 @Entity
-@Table(name="rol")
-public class Rol {
+@Table(name = "role")
+public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name="id", nullable = false)
+    @Column(name = "id", nullable = false)
     private int id;
 
-    @Column(name="name", nullable = false)
+    @Column(name = "name", nullable = false)
     private String name;
 
-
-    //Relación con user
-    @OneToMany(mappedBy = "rol")
+    // Relación con user
+    @OneToMany(mappedBy = "role")
     @JsonIgnore
     private List<User> users;
 
-    //Constructores
-    public Rol() {}
+    // Constructores
+    public Role() {
+    }
 
-    public Rol(String name) {
+    public Role(String name) {
         this.name = name;
     }
 
-    public Rol(int id, String name) {
+    public Role(int id, String name) {
         this.id = id;
         this.name = name;
     }
 
-    public Rol(String name, List<User> users) {
+    public Role(String name, List<User> users) {
         this.name = name;
         this.users = users;
     }
 
-    public Rol(int id, String name, List<User> users) {
+    public Role(int id, String name, List<User> users) {
         this.id = id;
         this.name = name;
         this.users = users;
     }
 
-    //Getters y setters
+    // Getters y setters
 
     public int getId() {
         return id;
