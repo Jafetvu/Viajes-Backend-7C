@@ -32,7 +32,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmailAndIdNot(String email, long id);
     boolean existsByPhoneNumberAndIdNot(String phoneNumber, long id);
 
-    // Choferes pendientes: rol id=3 y status=false
+    // Choferes pendientes: role id=3 y status=false
     @Query("select u from User u where u.role.id = 3 and u.status = false")
     List<User> findPendingDrivers();
 

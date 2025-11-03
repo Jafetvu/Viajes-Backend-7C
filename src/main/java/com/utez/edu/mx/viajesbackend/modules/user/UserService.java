@@ -87,10 +87,10 @@ public class UserService {
             String uniqueUsername = ensureUniqueUsername(baseUsername);
             user.setUsername(uniqueUsername);
 
-            // Estado automático según rol
-            // Si el rol es 3 (ROLE_DRIVER) => status = false; en otro caso => true
-            int rolId = (user.getRole() != null) ? user.getRole().getId() : -1;
-            user.setStatus(rolId == 3 ? false : true);
+            // Estado automático según role
+            // Si el role es 3 (ROLE_DRIVER) => status = false; en otro caso => true
+            int roleId = (user.getRole() != null) ? user.getRole().getId() : -1;
+            user.setStatus(roleId == 3 ? false : true);
 
             userRepository.save(user);
             return customResponseEntity.getOkResponse("Usuario guaradado correctamente", "ok", 200, null);

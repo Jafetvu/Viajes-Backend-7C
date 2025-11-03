@@ -73,7 +73,7 @@ public class DriverController {
 
     /* ===========================================
        VISTA ADMIN: LISTA DE CHOFERES PENDIENTES
-       - rol.id = 3 y user.status = false
+       - role.id = 3 y user.status = false
        =========================================== */
     @GetMapping("/admin/pending")
     @Transactional(Transactional.TxType.SUPPORTS)

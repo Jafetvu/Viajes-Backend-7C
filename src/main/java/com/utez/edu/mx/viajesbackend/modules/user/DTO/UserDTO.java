@@ -69,8 +69,8 @@ public class UserDTO {
         return role;
     }
 
-    public void setRol(Role rol) {
-        this.role = rol;
+    public void setRole(Role role) {
+        this.role = role;
     }
 
     public String getUsername() {

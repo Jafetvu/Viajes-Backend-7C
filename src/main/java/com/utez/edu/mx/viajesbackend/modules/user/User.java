@@ -58,7 +58,7 @@ public class User {
     @Column(name = "status")
     private boolean status;
 
-    // Relación con rol
+    // Relación con role
 
     @ManyToOne
     @JoinColumn(name = "id_role", nullable = false)
