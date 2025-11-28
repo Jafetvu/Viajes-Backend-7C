@@ -24,7 +24,7 @@ public class DriverController {
     private final VehicleRepository vehicleRepository;
     private final DriverDocumentRepository documentRepository;
     private final UserRepository userRepository;
-    private final DriverProfileService driverProfileService; // para usar tus servicios existentes
+    private final DriverProfileService driverProfileService;
 
     public DriverController(DriverProfileRepository driverProfileRepository,
                             VehicleRepository vehicleRepository,

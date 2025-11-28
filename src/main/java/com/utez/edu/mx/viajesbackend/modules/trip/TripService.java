@@ -31,7 +31,6 @@ import java.util.*;
 public class TripService {
 
     private static final Logger logger = LoggerFactory.getLogger(TripService.class);
-    private static final int ROLE_DRIVER_ID = 3;
 
     private final TripRepository tripRepository;
     private final UserRepository userRepository;
