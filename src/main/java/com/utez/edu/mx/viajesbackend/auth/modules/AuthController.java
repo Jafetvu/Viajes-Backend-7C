@@ -20,7 +20,7 @@ import com.utez.edu.mx.viajesbackend.security.JWTUtil;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService service;
@@ -36,6 +36,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AuthLoginDto dto) {
         return service.login(dto);
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@Valid @RequestBody com.utez.edu.mx.viajesbackend.auth.dtos.RegisterDto dto) {
+        return service.register(dto);
     }
 
     @PostMapping("/forgot-password")

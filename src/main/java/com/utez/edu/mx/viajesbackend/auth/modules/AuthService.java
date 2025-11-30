@@ -39,6 +39,7 @@ public class AuthService {
     private final AttemptService attemptService;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JWTUtil jwtUtil;
+    private final com.utez.edu.mx.viajesbackend.modules.role.RoleRepository roleRepository;
     private final SecureRandom random = new SecureRandom();
 
     public AuthService(
@@ -48,7 +49,8 @@ public class AuthService {
             JavaMailSender mailSender,
             AttemptService attemptService,
             BCryptPasswordEncoder passwordEncoder,
-            JWTUtil jwtUtil) {
+            JWTUtil jwtUtil,
+            com.utez.edu.mx.viajesbackend.modules.role.RoleRepository roleRepository) {
         this.authManager = authManager;
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
@@ -56,6 +58,51 @@ public class AuthService {
         this.attemptService = attemptService;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.roleRepository = roleRepository;
+    }
+
+    @Transactional
+    public ResponseEntity<?> register(com.utez.edu.mx.viajesbackend.auth.dtos.RegisterDto dto) {
+        if (userRepository.existsByEmail(dto.email())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "El correo ya está registrado"));
+        }
+        if (userRepository.existsByUsername(dto.username())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "El nombre de usuario ya está en uso"));
+        }
+        if (userRepository.existsByPhoneNumber(dto.phoneNumber())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "El teléfono ya está registrado"));
+        }
+
+        User user = new User();
+        user.setName(dto.name());
+        user.setSurname(dto.surname());
+        user.setLastname(dto.lastname());
+        user.setEmail(dto.email());
+        user.setUsername(dto.username());
+        user.setPhoneNumber(dto.phoneNumber());
+        user.setPassword(passwordEncoder.encode(dto.password()));
+
+        // Look up role by name to avoid hardcoded IDs
+        String roleName = dto.isDriver() ? "CONDUCTOR" : "CLIENTE";
+        
+        com.utez.edu.mx.viajesbackend.modules.role.Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
+        
+        if (dto.isDriver()) {
+            user.setStatus(false); // Pending approval
+        } else {
+            user.setStatus(true); // Active
+        }
+        
+        user.setRole(role);
+
+        userRepository.save(user);
+
+        String msg = dto.isDriver() ? 
+            "Registro exitoso. Tu cuenta de conductor está pendiente de aprobación." : 
+            "Usuario registrado correctamente";
+
+        return ResponseEntity.ok(Map.of("message", msg));
     }
 
     @Transactional

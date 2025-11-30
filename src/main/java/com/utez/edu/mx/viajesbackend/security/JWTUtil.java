@@ -40,7 +40,26 @@ public class JWTUtil {
     }
 
     public String generateToken(UserDetails userDetails) {
+        java.util.Map<String, Object> claims = new java.util.HashMap<>();
+        if (userDetails instanceof UserDetailsImpl) {
+            UserDetailsImpl impl = (UserDetailsImpl) userDetails;
+            claims.put("id", impl.getId());
+            claims.put("name", impl.getName());
+            claims.put("paternalSurname", impl.getPaternalSurname());
+            claims.put("maternalSurname", impl.getMaternalSurname());
+            claims.put("email", impl.getEmail());
+            claims.put("phone", impl.getPhone());
+            claims.put("status", impl.isEnabled());
+            if (impl.getCreatedAt() != null) {
+                claims.put("createdAt", impl.getCreatedAt().toString());
+            }
+        }
+        claims.put("roles", userDetails.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .collect(java.util.stream.Collectors.joining(",")));
+
         return Jwts.builder()
+        .setClaims(claims)
         .setHeaderParam("kid", "primary")
         .setSubject(userDetails.getUsername())
         .setIssuedAt(new Date())

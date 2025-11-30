@@ -64,6 +64,14 @@ public class User {
     @JoinColumn(name = "id_role", nullable = false)
     private Role role;
 
+    @Column(name = "created_at", updatable = false)
+    private java.time.LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = java.time.LocalDateTime.now();
+    }
+
     // Constructores
     public User() {
     }
@@ -200,5 +208,13 @@ public class User {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public java.time.LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(java.time.LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }
