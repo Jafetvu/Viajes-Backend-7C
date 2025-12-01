@@ -7,6 +7,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import com.utez.edu.mx.viajesbackend.auth.KeyService;
+import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfileRepository;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -17,9 +18,11 @@ import io.jsonwebtoken.SignatureAlgorithm;
 public class JWTUtil {
 
     private final KeyService keyService;
+    private final DriverProfileRepository driverProfileRepository;
 
-    public JWTUtil(KeyService keyService) {
+    public JWTUtil(KeyService keyService, DriverProfileRepository driverProfileRepository) {
         this.keyService = keyService;
+        this.driverProfileRepository = driverProfileRepository;
     }
 
     public String extractUsername(String token) {
@@ -52,6 +55,15 @@ public class JWTUtil {
             claims.put("status", impl.isEnabled());
             if (impl.getCreatedAt() != null) {
                 claims.put("createdAt", impl.getCreatedAt().toString());
+            }
+            
+            // Add driverProfileId if applicable
+            boolean isDriver = userDetails.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_CONDUCTOR"));
+            
+            if (isDriver) {
+                driverProfileRepository.findByUserId(impl.getId())
+                        .ifPresent(profile -> claims.put("driverProfileId", profile.getId()));
             }
         }
         claims.put("roles", userDetails.getAuthorities().stream()

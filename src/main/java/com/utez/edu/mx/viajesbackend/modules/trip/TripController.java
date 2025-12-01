@@ -69,8 +69,9 @@ public class TripController {
     /** Permite al conductor aceptar un viaje solicitado. */
     @PutMapping("/{tripId}/accept")
     public ResponseEntity<?> acceptTrip(@PathVariable Long tripId,
-                                        @RequestParam Long driverId) {
-        return tripService.acceptTrip(tripId, driverId);
+                                        @RequestParam(required = false) Long driverId,
+                                        @RequestParam(required = false) Long userId) {
+        return tripService.acceptTrip(tripId, driverId, userId);
     }
 
     /** Permite al conductor rechazar un viaje solicitado o aceptado. */
@@ -80,11 +81,44 @@ public class TripController {
         return tripService.rejectTrip(tripId, driverId);
     }
 
-    /** Actualiza el estado del viaje (flujo ACEPTADO → EN_CAMINO → EN_CURSO). */
+    /** Notifica que el conductor ha llegado al punto de recogida. */
+    @PutMapping("/{tripId}/arrival")
+    public ResponseEntity<?> notifyArrival(@PathVariable Long tripId,
+                                           @RequestParam(required = false) Long driverId,
+                                           @RequestParam(required = false) Long userId) {
+        return tripService.notifyArrival(tripId, driverId, userId);
+    }
+
+    /** Notifica que el conductor ha llegado al destino (Dropoff). */
+    @PutMapping("/{tripId}/dropoff")
+    public ResponseEntity<?> notifyDropoff(@PathVariable Long tripId,
+                                           @RequestParam(required = false) Long driverId,
+                                           @RequestParam(required = false) Long userId) {
+        return tripService.notifyDropoff(tripId, driverId, userId);
+    }
+
+    /** Actualiza el estado del viaje (obsoleto, usar start). */
     @PutMapping("/status")
-    public ResponseEntity<?> updateTripStatus(@RequestParam Long driverId,
+    public ResponseEntity<?> updateTripStatus(@RequestParam(required = false) Long driverId,
+                                              @RequestParam(required = false) Long userId,
                                               @Valid @RequestBody TripStatusUpdateDTO dto) {
-        return tripService.updateTripStatus(driverId, dto);
+        // Mantenemos compatibilidad temporal
+        return tripService.updateTripStatus(driverId, userId, dto);
+    }
+
+    /** Inicia el viaje por parte del conductor */
+    @PutMapping("/{tripId}/start/driver")
+    public ResponseEntity<?> startTripByDriver(@PathVariable Long tripId,
+                                               @RequestParam(required = false) Long driverId,
+                                               @RequestParam(required = false) Long userId) {
+        return tripService.startTripByDriver(driverId, userId, tripId);
+    }
+
+    /** Inicia el viaje por parte del cliente */
+    @PutMapping("/{tripId}/start/client")
+    public ResponseEntity<?> startTripByClient(@PathVariable Long tripId,
+                                               @RequestParam Long clientId) {
+        return tripService.startTripByClient(clientId, tripId);
     }
 
     /** Historial de viajes e ingresos de un conductor. */
@@ -96,8 +130,9 @@ public class TripController {
     /** Marca el viaje como completado por parte del conductor. */
     @PutMapping("/{tripId}/complete/driver")
     public ResponseEntity<?> completeTripByDriver(@PathVariable Long tripId,
-                                                  @RequestParam Long driverId) {
-        return tripService.completeTripByDriver(driverId, tripId);
+                                                  @RequestParam(required = false) Long driverId,
+                                                  @RequestParam(required = false) Long userId) {
+        return tripService.completeTripByDriver(driverId, userId, tripId);
     }
 
     /** Marca el viaje como completado por parte del cliente. */

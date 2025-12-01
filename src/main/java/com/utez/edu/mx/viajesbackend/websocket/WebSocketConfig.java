@@ -18,9 +18,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtHandshakeInterceptor jwtHandshakeInterceptor;
+    private final com.utez.edu.mx.viajesbackend.security.JWTUtil jwtUtil;
 
-    public WebSocketConfig(JwtHandshakeInterceptor jwtHandshakeInterceptor) {
+    public WebSocketConfig(JwtHandshakeInterceptor jwtHandshakeInterceptor, com.utez.edu.mx.viajesbackend.security.JWTUtil jwtUtil) {
         this.jwtHandshakeInterceptor = jwtHandshakeInterceptor;
+        this.jwtUtil = jwtUtil;
     }
 
     /**
@@ -56,12 +58,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
                 .addInterceptors(jwtHandshakeInterceptor)
+                .setHandshakeHandler(new UserHandshakeHandler(jwtUtil))
                 .setAllowedOriginPatterns("*") // For development; restrict in production
                 .withSockJS(); // Fallback for browsers without WebSocket support
 
         // Native WebSocket endpoint without SockJS (for WSS support)
         registry.addEndpoint("/ws")
                 .addInterceptors(jwtHandshakeInterceptor)
+                .setHandshakeHandler(new UserHandshakeHandler(jwtUtil))
                 .setAllowedOriginPatterns("*");
     }
 }

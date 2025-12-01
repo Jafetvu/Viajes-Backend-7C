@@ -12,11 +12,23 @@ public class TripRequestDTO {
     @NotNull(message = "El identificador del cliente es obligatorio")
     private Long clientId;
 
-    @NotBlank(message = "El origen es obligatorio")
-    private String origin;
+    @NotBlank(message = "La dirección de origen es obligatoria")
+    private String originAddress;
 
-    @NotBlank(message = "El destino es obligatorio")
-    private String destination;
+    @NotNull(message = "La latitud de origen es obligatoria")
+    private Double originLatitude;
+
+    @NotNull(message = "La longitud de origen es obligatoria")
+    private Double originLongitude;
+
+    @NotBlank(message = "La dirección de destino es obligatoria")
+    private String destinationAddress;
+
+    @NotNull(message = "La latitud de destino es obligatoria")
+    private Double destinationLatitude;
+
+    @NotNull(message = "La longitud de destino es obligatoria")
+    private Double destinationLongitude;
 
     public Long getClientId() {
         return clientId;
@@ -26,19 +38,51 @@ public class TripRequestDTO {
         this.clientId = clientId;
     }
 
-    public String getOrigin() {
-        return origin;
+    public String getOriginAddress() {
+        return originAddress;
     }
 
-    public void setOrigin(String origin) {
-        this.origin = origin;
+    public void setOriginAddress(String originAddress) {
+        this.originAddress = originAddress;
     }
 
-    public String getDestination() {
-        return destination;
+    public Double getOriginLatitude() {
+        return originLatitude;
     }
 
-    public void setDestination(String destination) {
-        this.destination = destination;
+    public void setOriginLatitude(Double originLatitude) {
+        this.originLatitude = originLatitude;
+    }
+
+    public Double getOriginLongitude() {
+        return originLongitude;
+    }
+
+    public void setOriginLongitude(Double originLongitude) {
+        this.originLongitude = originLongitude;
+    }
+
+    public String getDestinationAddress() {
+        return destinationAddress;
+    }
+
+    public void setDestinationAddress(String destinationAddress) {
+        this.destinationAddress = destinationAddress;
+    }
+
+    public Double getDestinationLatitude() {
+        return destinationLatitude;
+    }
+
+    public void setDestinationLatitude(Double destinationLatitude) {
+        this.destinationLatitude = destinationLatitude;
+    }
+
+    public Double getDestinationLongitude() {
+        return destinationLongitude;
+    }
+
+    public void setDestinationLongitude(Double destinationLongitude) {
+        this.destinationLongitude = destinationLongitude;
     }
 }

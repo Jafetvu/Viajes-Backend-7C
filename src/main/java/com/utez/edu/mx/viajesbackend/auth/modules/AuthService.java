@@ -14,6 +14,8 @@ import com.utez.edu.mx.viajesbackend.auth.dtos.ChangePasswordDto;
 import com.utez.edu.mx.viajesbackend.auth.dtos.PasswordResetDto;
 import com.utez.edu.mx.viajesbackend.auth.dtos.PasswordResetRequestDto;
 import com.utez.edu.mx.viajesbackend.auth.dtos.VerifyCodeDto;
+import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfile;
+import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfileRepository;
 import com.utez.edu.mx.viajesbackend.modules.user.User;
 import com.utez.edu.mx.viajesbackend.modules.user.UserRepository;
 import com.utez.edu.mx.viajesbackend.security.JWTUtil;
@@ -40,6 +42,7 @@ public class AuthService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final JWTUtil jwtUtil;
     private final com.utez.edu.mx.viajesbackend.modules.role.RoleRepository roleRepository;
+    private final DriverProfileRepository driverProfileRepository;
     private final SecureRandom random = new SecureRandom();
 
     public AuthService(
@@ -50,7 +53,8 @@ public class AuthService {
             AttemptService attemptService,
             BCryptPasswordEncoder passwordEncoder,
             JWTUtil jwtUtil,
-            com.utez.edu.mx.viajesbackend.modules.role.RoleRepository roleRepository) {
+            com.utez.edu.mx.viajesbackend.modules.role.RoleRepository roleRepository,
+            DriverProfileRepository driverProfileRepository) {
         this.authManager = authManager;
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
@@ -59,6 +63,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.roleRepository = roleRepository;
+        this.driverProfileRepository = driverProfileRepository;
     }
 
     @Transactional
@@ -164,6 +169,13 @@ public class AuthService {
         userMap.put("role", user.getRole());
         userMap.put("phone", user.getPhoneNumber());
         userMap.put("status", user.isStatus());
+
+        // If user is a driver, include driverProfileId
+        if (user.getRole() != null && "CONDUCTOR".equalsIgnoreCase(user.getRole().getName())) {
+            Optional<DriverProfile> driverProfileOpt = driverProfileRepository.findByUserId(user.getId());
+            driverProfileOpt.ifPresent(profile -> userMap.put("driverProfileId", profile.getId()));
+        }
+
         payload.put("statusCode", HttpStatus.OK.value());
         payload.put("token", jwt);
         payload.put("user", userMap);

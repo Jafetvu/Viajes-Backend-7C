@@ -39,16 +39,28 @@ public class Trip {
     private DriverProfile driver;
 
     /**
-     * Punto de origen del viaje. Requerido.
+     * Dirección de origen del viaje.
      */
-    @Column(nullable = false)
-    private String origin;
+    @Column(name = "origin_address", nullable = false)
+    private String originAddress;
+
+    @Column(name = "origin_lat", nullable = false)
+    private Double originLatitude;
+
+    @Column(name = "origin_lng", nullable = false)
+    private Double originLongitude;
 
     /**
-     * Punto de destino del viaje. Requerido.
+     * Dirección de destino del viaje.
      */
-    @Column(nullable = false)
-    private String destination;
+    @Column(name = "destination_address", nullable = false)
+    private String destinationAddress;
+
+    @Column(name = "destination_lat", nullable = false)
+    private Double destinationLatitude;
+
+    @Column(name = "destination_lng", nullable = false)
+    private Double destinationLongitude;
 
     /**
      * Tarifa total para el viaje. Esta cifra se calcula al solicitar el
@@ -112,6 +124,12 @@ public class Trip {
     @Column(name = "client_completed")
     private boolean clientCompleted = false;
 
+    @Column(name = "driver_started")
+    private boolean driverStarted = false;
+
+    @Column(name = "client_started")
+    private boolean clientStarted = false;
+
     // Getters y Setters
     public Long getId() {
         return id;
@@ -137,20 +155,52 @@ public class Trip {
         this.driver = driver;
     }
 
-    public String getOrigin() {
-        return origin;
+    public String getOriginAddress() {
+        return originAddress;
     }
 
-    public void setOrigin(String origin) {
-        this.origin = origin;
+    public void setOriginAddress(String originAddress) {
+        this.originAddress = originAddress;
     }
 
-    public String getDestination() {
-        return destination;
+    public Double getOriginLatitude() {
+        return originLatitude;
     }
 
-    public void setDestination(String destination) {
-        this.destination = destination;
+    public void setOriginLatitude(Double originLatitude) {
+        this.originLatitude = originLatitude;
+    }
+
+    public Double getOriginLongitude() {
+        return originLongitude;
+    }
+
+    public void setOriginLongitude(Double originLongitude) {
+        this.originLongitude = originLongitude;
+    }
+
+    public String getDestinationAddress() {
+        return destinationAddress;
+    }
+
+    public void setDestinationAddress(String destinationAddress) {
+        this.destinationAddress = destinationAddress;
+    }
+
+    public Double getDestinationLatitude() {
+        return destinationLatitude;
+    }
+
+    public void setDestinationLatitude(Double destinationLatitude) {
+        this.destinationLatitude = destinationLatitude;
+    }
+
+    public Double getDestinationLongitude() {
+        return destinationLongitude;
+    }
+
+    public void setDestinationLongitude(Double destinationLongitude) {
+        this.destinationLongitude = destinationLongitude;
     }
 
     public Double getFare() {
@@ -223,5 +273,21 @@ public class Trip {
 
     public void setClientCompleted(boolean clientCompleted) {
         this.clientCompleted = clientCompleted;
+    }
+
+    public boolean isDriverStarted() {
+        return driverStarted;
+    }
+
+    public void setDriverStarted(boolean driverStarted) {
+        this.driverStarted = driverStarted;
+    }
+
+    public boolean isClientStarted() {
+        return clientStarted;
+    }
+
+    public void setClientStarted(boolean clientStarted) {
+        this.clientStarted = clientStarted;
     }
 }

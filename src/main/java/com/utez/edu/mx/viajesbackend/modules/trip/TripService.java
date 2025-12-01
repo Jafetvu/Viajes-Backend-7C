@@ -22,10 +22,6 @@ import java.util.*;
 
 /**
  * Main service for managing business logic related to trips.
- * Allows clients to request trips, drivers to accept or reject requests,
- * update trip status and query history for both clients and drivers.
- * All responses are generated through {@link CustomResponseEntity} for uniform formatting.
- * Integrates WebSocket notifications for real-time updates.
  */
 @Service
 public class TripService {
@@ -53,23 +49,25 @@ public class TripService {
         this.notificationService = notificationService;
     }
 
-    /**
-     * Creates a new trip request for a client. Does not automatically assign
-     * a driver; registers the request with status {@link TripStatus#REQUESTED}
-     * so drivers can accept or reject it.
-     */
     @Transactional(rollbackOn = {SQLException.class, Exception.class})
     public ResponseEntity<?> requestTrip(TripRequestDTO dto) {
         Optional<User> client = userRepository.findById(dto.getClientId());
         if (client.isEmpty()) {
             return customResponseEntity.get404Response();
         }
-        double fare = calculateFare(dto.getOrigin(), dto.getDestination());
+        // Pass coordinates to fare calculation if needed, or just address
+        double fare = calculateFare(dto.getOriginAddress(), dto.getDestinationAddress());
 
         Trip trip = new Trip();
         trip.setClient(client.orElse(null));
-        trip.setOrigin(dto.getOrigin());
-        trip.setDestination(dto.getDestination());
+        trip.setOriginAddress(dto.getOriginAddress());
+        trip.setOriginLatitude(dto.getOriginLatitude());
+        trip.setOriginLongitude(dto.getOriginLongitude());
+        
+        trip.setDestinationAddress(dto.getDestinationAddress());
+        trip.setDestinationLatitude(dto.getDestinationLatitude());
+        trip.setDestinationLongitude(dto.getDestinationLongitude());
+        
         trip.setFare(fare);
         trip.setStatus(TripStatus.REQUESTED);
         LocalDateTime now = LocalDateTime.now();
@@ -77,21 +75,17 @@ public class TripService {
         trip.setUpdatedAt(now);
         Trip savedTrip = tripRepository.save(trip);
 
-        // Send WebSocket notification to all drivers
         tripWebSocketController.broadcastNewTripToDrivers(savedTrip);
-        logger.info("New trip requested by client ID: {}, broadcasting to drivers", dto.getClientId());
-
-        // Send notification to client
+        
         notificationService.createAndSendNotification(
                 client.get().getId(),
                 NotificationType.OK,
                 "Trip Requested",
-                "Your trip from " + dto.getOrigin() + " to " + dto.getDestination() + " has been requested successfully.",
+                "Your trip has been requested.",
                 savedTrip.getId()
         );
 
-        TripDTO responseDto = convertToDTO(savedTrip);
-        return customResponseEntity.getOkResponse("Trip requested successfully", "ok", 200, responseDto);
+        return customResponseEntity.getOkResponse("Trip requested", "ok", 200, convertToDTO(savedTrip));
     }
 
     @Transactional
@@ -100,7 +94,7 @@ public class TripService {
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
         if (!Objects.equals(trip.getClient().getId(), clientId)) {
-            return customResponseEntity.get400Response("El viaje no pertenece al cliente");
+            return customResponseEntity.get400Response("Unauthorized");
         }
         return customResponseEntity.getOkResponse("Detalle del viaje", "ok", 200, convertToDTO(trip));
     }
@@ -111,10 +105,10 @@ public class TripService {
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
         if (!Objects.equals(trip.getClient().getId(), clientId)) {
-            return customResponseEntity.get400Response("El viaje no pertenece al cliente");
+            return customResponseEntity.get400Response("Unauthorized");
         }
         if (trip.getStatus() == TripStatus.COMPLETED) {
-            return customResponseEntity.get400Response("Cannot cancel a completed trip");
+            return customResponseEntity.get400Response("Cannot cancel completed trip");
         }
         trip.setStatus(TripStatus.CANCELLED);
         trip.setCancelReason(reason);
@@ -134,33 +128,26 @@ public class TripService {
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
         if (!Objects.equals(trip.getClient().getId(), clientId)) {
-            return customResponseEntity.get400Response("El viaje no pertenece al cliente");
+            return customResponseEntity.get400Response("Unauthorized");
         }
         if (trip.getStatus() != TripStatus.COMPLETED) {
-            return customResponseEntity.get400Response("Only completed trips can be rated");
-        }
-        if (trip.getRating() != null) {
-            return customResponseEntity.get400Response("El viaje ya ha sido calificado previamente");
+            return customResponseEntity.get400Response("Trip not completed");
         }
         trip.setRating(dto.getRating());
         trip.setComment(dto.getComment());
         trip.setUpdatedAt(LocalDateTime.now());
         tripRepository.save(trip);
-        return customResponseEntity.getOkResponse("Calificación registrada", "ok", 200, null);
+        return customResponseEntity.getOkResponse("Rated", "ok", 200, null);
     }
 
     @Transactional
     public ResponseEntity<?> getClientTripHistory(Long clientId) {
         List<Trip> trips = tripRepository.findByClientId(clientId);
-        if (trips.isEmpty()) {
-            return customResponseEntity.getOkResponse("No hay viajes registrados", "ok", 200, Collections.emptyList());
-        }
-        trips.sort(Comparator.comparing(Trip::getCreatedAt, Comparator.nullsLast(LocalDateTime::compareTo)).reversed());
         List<TripDTO> out = new ArrayList<>();
         for (Trip t : trips) {
             out.add(convertToDTO(t));
         }
-        return customResponseEntity.getOkResponse("Historial de viajes", "ok", 200, out);
+        return customResponseEntity.getOkResponse("History", "ok", 200, out);
     }
 
     @Transactional
@@ -172,7 +159,7 @@ public class TripService {
                 out.add(convertToDTO(t));
             }
         }
-        return customResponseEntity.getOkResponse("Solicitudes asignadas", "ok", 200, out);
+        return customResponseEntity.getOkResponse("Assigned trips", "ok", 200, out);
     }
 
     @Transactional
@@ -184,25 +171,42 @@ public class TripService {
                 out.add(convertToDTO(t));
             }
         }
-        return customResponseEntity.getOkResponse("Solicitudes disponibles", "ok", 200, out);
+        return customResponseEntity.getOkResponse("Available trips", "ok", 200, out);
     }
 
     @Transactional(rollbackOn = {SQLException.class, Exception.class})
-    public ResponseEntity<?> acceptTrip(Long tripId, Long driverId) {
+    public ResponseEntity<?> acceptTrip(Long tripId, Long driverId, Long userId) {
         Optional<Trip> maybe = tripRepository.findById(tripId);
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
         if (trip.getStatus() != TripStatus.REQUESTED || trip.getDriver() != null) {
-            return customResponseEntity.get400Response("Trip is not available to be accepted");
+            return customResponseEntity.get400Response("Unavailable");
         }
-        Optional<DriverProfile> driverOpt = driverProfileRepository.findById(driverId);
-        if (driverOpt.isEmpty()) {
-            return customResponseEntity.get404Response();
+
+        DriverProfile driver = null;
+        if (driverId != null) {
+            driver = driverProfileRepository.findById(driverId).orElse(null);
         }
-        DriverProfile driver = driverOpt.get();
+        if (driver == null && userId != null) {
+            driver = driverProfileRepository.findByUserId(userId).orElse(null);
+            if (driver == null) {
+                // Auto-create profile if not exists
+                Optional<User> userOpt = userRepository.findById(userId);
+                if (userOpt.isPresent() && "CONDUCTOR".equalsIgnoreCase(userOpt.get().getRole().getName())) {
+                    DriverProfile newProfile = new DriverProfile();
+                    newProfile.setUser(userOpt.get());
+                    newProfile.setLicenseNumber("LIC-" + System.currentTimeMillis());
+                    newProfile.setAvailability(DriverAvailability.DISPONIBLE);
+                    driver = driverProfileRepository.save(newProfile);
+                }
+            }
+        }
+
+        if (driver == null) return customResponseEntity.get404Response();
         if (driver.getAvailability() != DriverAvailability.DISPONIBLE) {
-            return customResponseEntity.get400Response("El conductor no está disponible para aceptar viajes");
+            return customResponseEntity.get400Response("Driver not available");
         }
+
         trip.setDriver(driver);
         trip.setStatus(TripStatus.ACCEPTED);
         trip.setUpdatedAt(LocalDateTime.now());
@@ -210,21 +214,8 @@ public class TripService {
         driver.setAvailability(DriverAvailability.EN_VIAJE);
         driverProfileRepository.save(driver);
 
-        // Send WebSocket update to client
-        tripWebSocketController.sendTripUpdateToClient(
-                trip.getClient().getUsername(),
-                savedTrip,
-                "Your trip has been accepted by a driver"
-        );
-
-        // Send notification to client
-        notificationService.createAndSendNotification(
-                trip.getClient().getId(),
-                NotificationType.OK,
-                "Trip Accepted",
-                "A driver has accepted your trip request!",
-                savedTrip.getId()
-        );
+        tripWebSocketController.sendTripUpdateToClient(trip.getClient().getUsername(), savedTrip, "Trip accepted");
+        notificationService.createAndSendNotification(trip.getClient().getId(), NotificationType.OK, "Trip Accepted", "Driver assigned", savedTrip.getId());
 
         return customResponseEntity.getOkResponse("Trip accepted", "ok", 200, null);
     }
@@ -234,242 +225,234 @@ public class TripService {
         Optional<Trip> maybe = tripRepository.findById(tripId);
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
+        
         if (trip.getStatus() == TripStatus.REQUESTED && trip.getDriver() == null) {
-            trip.setStatus(TripStatus.CANCELLED);
-            trip.setUpdatedAt(LocalDateTime.now());
-            tripRepository.save(trip);
-            return customResponseEntity.getOkResponse("Trip rejected and cancelled", "ok", 200, null);
+             trip.setStatus(TripStatus.CANCELLED);
+             trip.setUpdatedAt(LocalDateTime.now());
+             tripRepository.save(trip);
+             return customResponseEntity.getOkResponse("Trip cancelled", "ok", 200, null);
         }
+
         if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), driverId)) {
-            return customResponseEntity.get400Response("Trip is not assigned to this driver");
-        }
-        if (trip.getStatus() != TripStatus.ACCEPTED) {
-            return customResponseEntity.get400Response("Only accepted trips that haven't started can be rejected");
+            return customResponseEntity.get400Response("Unauthorized");
         }
         trip.setStatus(TripStatus.CANCELLED);
         trip.setUpdatedAt(LocalDateTime.now());
         Trip savedTrip = tripRepository.save(trip);
-        DriverProfile driver = trip.getDriver();
-        driver.setAvailability(DriverAvailability.DISPONIBLE);
-        driverProfileRepository.save(driver);
+        trip.getDriver().setAvailability(DriverAvailability.DISPONIBLE);
+        driverProfileRepository.save(trip.getDriver());
 
-        // Send WebSocket update to client
-        tripWebSocketController.sendTripUpdateToClient(
-                trip.getClient().getUsername(),
-                savedTrip,
-                "Your trip has been cancelled by the driver"
-        );
-
-        // Send notification to client
-        notificationService.createAndSendNotification(
-                trip.getClient().getId(),
-                NotificationType.WARN,
-                "Trip Cancelled",
-                "The driver has cancelled your trip request.",
-                savedTrip.getId()
-        );
+        tripWebSocketController.sendTripUpdateToClient(trip.getClient().getUsername(), savedTrip, "Trip rejected");
+        notificationService.createAndSendNotification(trip.getClient().getId(), NotificationType.WARN, "Trip Cancelled", "Driver cancelled", savedTrip.getId());
 
         return customResponseEntity.getOkResponse("Trip rejected", "ok", 200, null);
     }
 
-    /**
-     * Updates the trip status in the flow: ACCEPTED → IN_PROGRESS.
-     * The transition to COMPLETED is managed separately (both users must confirm).
-     */
     @Transactional(rollbackOn = {SQLException.class, Exception.class})
-    public ResponseEntity<?> updateTripStatus(Long driverId, TripStatusUpdateDTO dto) {
-        Optional<Trip> maybe = tripRepository.findById(dto.getTripId());
-        if (maybe.isEmpty()) return customResponseEntity.get404Response();
-        Trip trip = maybe.get();
-        if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), driverId)) {
-            return customResponseEntity.get400Response("Trip is not assigned to this driver");
-        }
-        TripStatus current = trip.getStatus();
-        TripStatus newStatus = dto.getStatus();
-        if (!isValidTransition(current, newStatus)) {
-            return customResponseEntity.get400Response("State transition not allowed");
-        }
-        trip.setStatus(newStatus);
-        trip.setUpdatedAt(LocalDateTime.now());
-        Trip savedTrip = tripRepository.save(trip);
-
-        // Send WebSocket update to both parties
-        tripWebSocketController.sendTripUpdateToBoth(savedTrip, "Trip status updated to " + newStatus);
-
-        // Send notifications
-        notificationService.createAndSendNotification(
-                trip.getClient().getId(),
-                NotificationType.INFO,
-                "Trip Status Updated",
-                "Your trip status has been updated to: " + newStatus,
-                savedTrip.getId()
-        );
-
-        if (trip.getDriver() != null) {
-            notificationService.createAndSendNotification(
-                    trip.getDriver().getUser().getId(),
-                    NotificationType.INFO,
-                    "Trip Status Updated",
-                    "Trip status updated to: " + newStatus,
-                    savedTrip.getId()
-            );
-        }
-
-        return customResponseEntity.getOkResponse("Trip status updated", "ok", 200, null);
-    }
-
-    @Transactional
-    public ResponseEntity<?> getDriverTripHistory(Long driverId) {
-        List<Trip> trips = tripRepository.findByDriverId(driverId);
-        if (trips.isEmpty()) {
-            Map<String,Object> resp = new LinkedHashMap<>();
-            resp.put("trips", Collections.emptyList());
-            resp.put("totalIncome", 0.0);
-            return customResponseEntity.getOkResponse("No hay viajes registrados", "ok", 200, resp);
-        }
-        double totalIncome = 0.0;
-        List<TripDTO> out = new ArrayList<>();
-        for (Trip t : trips) {
-            out.add(convertToDTO(t));
-            if (t.getStatus() == TripStatus.COMPLETED) {
-                totalIncome += (t.getFare() != null ? t.getFare() : 0.0);
-            }
-        }
-        Map<String,Object> resp = new LinkedHashMap<>();
-        resp.put("trips", out);
-        resp.put("totalIncome", totalIncome);
-        return customResponseEntity.getOkResponse("Historial de viajes e ingresos", "ok", 200, resp);
-    }
-
-    /**
-     * Allows the driver to mark a trip as completed. Only when the client
-     * also marks it as completed does the status change to COMPLETED and the driver is released.
-     */
-    @Transactional(rollbackOn = {SQLException.class, Exception.class})
-    public ResponseEntity<?> completeTripByDriver(Long driverId, Long tripId) {
+    public ResponseEntity<?> notifyArrival(Long tripId, Long driverId, Long userId) {
         Optional<Trip> maybe = tripRepository.findById(tripId);
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
-        if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), driverId)) {
-            return customResponseEntity.get400Response("Trip is not assigned to this driver");
+
+        Long effectiveDriverId = driverId;
+        if (effectiveDriverId == null && userId != null) {
+            Optional<DriverProfile> dp = driverProfileRepository.findByUserId(userId);
+            if (dp.isPresent()) effectiveDriverId = dp.get().getId();
         }
-        trip.setDriverCompleted(true);
-        boolean bothCompleted = trip.isDriverCompleted() && trip.isClientCompleted();
-        if (bothCompleted) {
-            trip.setStatus(TripStatus.COMPLETED);
-            DriverProfile driver = trip.getDriver();
-            driver.setAvailability(DriverAvailability.DISPONIBLE);
-            driverProfileRepository.save(driver);
-        } else {
+
+        if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), effectiveDriverId)) {
+             return customResponseEntity.get400Response("Unauthorized");
+        }
+        
+        // Send notification/WS update with a specific message or custom field
+        // We reuse TripUpdateMessage but the 'message' field will carry the event
+        tripWebSocketController.sendTripUpdateToClient(trip.getClient().getUsername(), trip, "DRIVER_ARRIVED");
+        notificationService.createAndSendNotification(
+                trip.getClient().getId(),
+                NotificationType.INFO,
+                "Driver Arrived",
+                "Your driver has arrived at the pickup location.",
+                trip.getId()
+        );
+        
+        return customResponseEntity.getOkResponse("Arrival notified", "ok", 200, null);
+    }
+
+    @Transactional(rollbackOn = {SQLException.class, Exception.class})
+    public ResponseEntity<?> notifyDropoff(Long tripId, Long driverId, Long userId) {
+        Optional<Trip> maybe = tripRepository.findById(tripId);
+        if (maybe.isEmpty()) return customResponseEntity.get404Response();
+        Trip trip = maybe.get();
+
+        Long effectiveDriverId = driverId;
+        if (effectiveDriverId == null && userId != null) {
+            Optional<DriverProfile> dp = driverProfileRepository.findByUserId(userId);
+            if (dp.isPresent()) effectiveDriverId = dp.get().getId();
+        }
+
+        if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), effectiveDriverId)) {
+            return customResponseEntity.get400Response("Unauthorized");
+        }
+
+        // Send notification/WS update
+        tripWebSocketController.sendTripUpdateToClient(trip.getClient().getUsername(), trip, "DROPOFF_ARRIVED");
+        // Also send to driver so their UI can update if needed (optional but good for consistency)
+        tripWebSocketController.sendTripUpdateToDriver(trip.getDriver().getUser().getUsername(), trip, "DROPOFF_ARRIVED");
+
+        notificationService.createAndSendNotification(
+                trip.getClient().getId(),
+                NotificationType.INFO,
+                "Arrived at Destination",
+                "Driver has arrived at the destination.",
+                trip.getId()
+        );
+
+        return customResponseEntity.getOkResponse("Dropoff arrival notified", "ok", 200, null);
+    }
+
+    // --- START TRIP LOGIC (DUAL CONFIRMATION) ---
+
+    @Transactional(rollbackOn = {SQLException.class, Exception.class})
+    public ResponseEntity<?> startTripByDriver(Long driverId, Long userId, Long tripId) {
+        Optional<Trip> maybe = tripRepository.findById(tripId);
+        if (maybe.isEmpty()) return customResponseEntity.get404Response();
+        Trip trip = maybe.get();
+
+        Long effectiveDriverId = driverId;
+        if (effectiveDriverId == null && userId != null) {
+            DriverProfile dp = driverProfileRepository.findByUserId(userId).orElse(null);
+            if (dp != null) effectiveDriverId = dp.getId();
+        }
+
+        if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), effectiveDriverId)) {
+            return customResponseEntity.get400Response("Unauthorized");
+        }
+
+        trip.setDriverStarted(true);
+        return checkAndStartTrip(trip);
+    }
+
+    @Transactional(rollbackOn = {SQLException.class, Exception.class})
+    public ResponseEntity<?> startTripByClient(Long clientId, Long tripId) {
+        Optional<Trip> maybe = tripRepository.findById(tripId);
+        if (maybe.isEmpty()) return customResponseEntity.get404Response();
+        Trip trip = maybe.get();
+
+        if (!Objects.equals(trip.getClient().getId(), clientId)) {
+            return customResponseEntity.get400Response("Unauthorized");
+        }
+
+        trip.setClientStarted(true);
+        return checkAndStartTrip(trip);
+    }
+
+    private ResponseEntity<?> checkAndStartTrip(Trip trip) {
+        boolean bothStarted = trip.isDriverStarted() && trip.isClientStarted();
+        
+        if (bothStarted) {
             trip.setStatus(TripStatus.IN_PROGRESS);
-        }
-        trip.setUpdatedAt(LocalDateTime.now());
-        Trip savedTrip = tripRepository.save(trip);
-
-        // Send WebSocket update to both parties
-        tripWebSocketController.sendTripUpdateToBoth(savedTrip,
-                bothCompleted ? "Trip completed!" : "Driver marked trip as completed");
-
-        // Send notifications
-        if (bothCompleted) {
-            notificationService.createAndSendNotification(
-                    trip.getClient().getId(),
-                    NotificationType.OK,
-                    "Trip Completed",
-                    "Your trip has been completed successfully!",
-                    savedTrip.getId()
-            );
-            notificationService.createAndSendNotification(
-                    trip.getDriver().getUser().getId(),
-                    NotificationType.OK,
-                    "Trip Completed",
-                    "Trip completed successfully!",
-                    savedTrip.getId()
-            );
+            trip.setUpdatedAt(LocalDateTime.now());
+            
+            // Notify both
+            tripWebSocketController.sendTripUpdateToBoth(trip, "Trip Started");
+            notificationService.createAndSendNotification(trip.getClient().getId(), NotificationType.INFO, "Trip Started", "Trip is now in progress", trip.getId());
+            notificationService.createAndSendNotification(trip.getDriver().getUser().getId(), NotificationType.INFO, "Trip Started", "Trip is now in progress", trip.getId());
         } else {
-            notificationService.createAndSendNotification(
-                    trip.getClient().getId(),
-                    NotificationType.INFO,
-                    "Driver Completed Trip",
-                    "The driver has marked the trip as completed. Please confirm.",
-                    savedTrip.getId()
-            );
+            // Notify the other party that one has confirmed
+            tripWebSocketController.sendTripUpdateToBoth(trip, "Waiting for start confirmation");
         }
-
-        String msg = bothCompleted ?
-                "Trip completed by both parties" :
-                "Driver has marked the trip as completed. Waiting for client confirmation";
+        
+        tripRepository.save(trip);
+        
+        String msg = bothStarted ? "Trip started" : "Confirmation received. Waiting for other party.";
         return customResponseEntity.getOkResponse(msg, "ok", 200, null);
     }
 
-    /**
-     * Allows the client to mark a trip as completed. Only when the driver
-     * also marks it as completed does the status change to COMPLETED.
-     */
+    // Legacy update method (mapped to start by driver for simplicity if needed, but deprecated)
+    @Transactional(rollbackOn = {SQLException.class, Exception.class})
+    public ResponseEntity<?> updateTripStatus(Long driverId, Long userId, TripStatusUpdateDTO dto) {
+        if (dto.getStatus() == TripStatus.IN_PROGRESS) {
+            return startTripByDriver(driverId, userId, dto.getTripId());
+        }
+        return customResponseEntity.get400Response("Use specific endpoints");
+    }
+
+    // --- COMPLETE TRIP LOGIC (DUAL CONFIRMATION) ---
+
+    @Transactional(rollbackOn = {SQLException.class, Exception.class})
+    public ResponseEntity<?> completeTripByDriver(Long driverId, Long userId, Long tripId) {
+        Optional<Trip> maybe = tripRepository.findById(tripId);
+        if (maybe.isEmpty()) return customResponseEntity.get404Response();
+        Trip trip = maybe.get();
+
+        Long effectiveDriverId = driverId;
+        if (effectiveDriverId == null && userId != null) {
+            DriverProfile dp = driverProfileRepository.findByUserId(userId).orElse(null);
+            if (dp != null) effectiveDriverId = dp.getId();
+        }
+
+        if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), effectiveDriverId)) {
+            return customResponseEntity.get400Response("Unauthorized");
+        }
+
+        trip.setDriverCompleted(true);
+        return checkAndCompleteTrip(trip);
+    }
+
     @Transactional(rollbackOn = {SQLException.class, Exception.class})
     public ResponseEntity<?> completeTripByClient(Long clientId, Long tripId) {
         Optional<Trip> maybe = tripRepository.findById(tripId);
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
+
         if (!Objects.equals(trip.getClient().getId(), clientId)) {
-            return customResponseEntity.get400Response("Trip does not belong to this client");
+            return customResponseEntity.get400Response("Unauthorized");
         }
+
         trip.setClientCompleted(true);
+        return checkAndCompleteTrip(trip);
+    }
+
+    private ResponseEntity<?> checkAndCompleteTrip(Trip trip) {
         boolean bothCompleted = trip.isDriverCompleted() && trip.isClientCompleted();
+
         if (bothCompleted) {
             trip.setStatus(TripStatus.COMPLETED);
+            trip.setUpdatedAt(LocalDateTime.now());
+            
+            // Free driver
             DriverProfile driver = trip.getDriver();
-            if (driver != null) {
-                driver.setAvailability(DriverAvailability.DISPONIBLE);
-                driverProfileRepository.save(driver);
-            }
-        } else {
-            trip.setStatus(TripStatus.IN_PROGRESS);
-        }
-        trip.setUpdatedAt(LocalDateTime.now());
-        Trip savedTrip = tripRepository.save(trip);
+            driver.setAvailability(DriverAvailability.DISPONIBLE);
+            driverProfileRepository.save(driver);
 
-        // Send WebSocket update to both parties
-        tripWebSocketController.sendTripUpdateToBoth(savedTrip,
-                bothCompleted ? "Trip completed!" : "Client marked trip as completed");
-
-        // Send notifications
-        if (bothCompleted) {
-            notificationService.createAndSendNotification(
-                    trip.getClient().getId(),
-                    NotificationType.OK,
-                    "Trip Completed",
-                    "Your trip has been completed successfully!",
-                    savedTrip.getId()
-            );
-            if (trip.getDriver() != null) {
-                notificationService.createAndSendNotification(
-                        trip.getDriver().getUser().getId(),
-                        NotificationType.OK,
-                        "Trip Completed",
-                        "Trip completed successfully!",
-                        savedTrip.getId()
-                );
-            }
+            // Notify both
+            tripWebSocketController.sendTripUpdateToBoth(trip, "Trip Completed");
+            notificationService.createAndSendNotification(trip.getClient().getId(), NotificationType.OK, "Trip Completed", "Trip completed successfully", trip.getId());
+            notificationService.createAndSendNotification(trip.getDriver().getUser().getId(), NotificationType.OK, "Trip Completed", "Trip completed successfully", trip.getId());
         } else {
-            if (trip.getDriver() != null) {
-                notificationService.createAndSendNotification(
-                        trip.getDriver().getUser().getId(),
-                        NotificationType.INFO,
-                        "Client Completed Trip",
-                        "The client has marked the trip as completed. Please confirm.",
-                        savedTrip.getId()
-                );
-            }
+            tripWebSocketController.sendTripUpdateToBoth(trip, "Waiting for completion confirmation");
         }
 
-        String msg = bothCompleted ?
-                "Trip completed by both parties" :
-                "Client has marked the trip as completed. Waiting for driver confirmation";
+        tripRepository.save(trip);
+        
+        String msg = bothCompleted ? "Trip completed" : "Confirmation received. Waiting for other party.";
         return customResponseEntity.getOkResponse(msg, "ok", 200, null);
     }
 
-    /* =================== MÉTODOS AUXILIARES =================== */
+    @Transactional
+    public ResponseEntity<?> getDriverTripHistory(Long driverId) {
+        List<Trip> trips = tripRepository.findByDriverId(driverId);
+        List<TripDTO> out = new ArrayList<>();
+        double income = 0;
+        for(Trip t : trips) {
+            out.add(convertToDTO(t));
+            if(t.getStatus() == TripStatus.COMPLETED) income += t.getFare();
+        }
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("trips", out);
+        resp.put("totalIncome", income);
+        return customResponseEntity.getOkResponse("History", "ok", 200, resp);
+    }
 
     private double calculateFare(String origin, String destination) {
         return 50.0;
@@ -497,8 +480,12 @@ public class TripService {
         }
         return new TripDTO(
                 trip.getId(),
-                trip.getOrigin(),
-                trip.getDestination(),
+                trip.getOriginAddress(),
+                trip.getOriginLatitude(),
+                trip.getOriginLongitude(),
+                trip.getDestinationAddress(),
+                trip.getDestinationLatitude(),
+                trip.getDestinationLongitude(),
                 trip.getFare(),
                 trip.getStatus(),
                 clientName,
@@ -509,14 +496,8 @@ public class TripService {
         );
     }
 
-    /**
-     * Validates state transitions in the flow ACCEPTED → IN_PROGRESS.
-     * Simplified flow: drivers can start trip directly after accepting.
-     */
     private boolean isValidTransition(TripStatus current, TripStatus next) {
-        // Allow ACCEPTED → IN_PROGRESS when both parties confirm start
         if (current == TripStatus.ACCEPTED && next == TripStatus.IN_PROGRESS) return true;
-        // Transition to COMPLETED is managed with confirmations
         return false;
     }
 }

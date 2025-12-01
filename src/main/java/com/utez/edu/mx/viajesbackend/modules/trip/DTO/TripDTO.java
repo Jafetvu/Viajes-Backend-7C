@@ -10,8 +10,12 @@ import com.utez.edu.mx.viajesbackend.modules.trip.TripStatus;
 public class TripDTO {
 
     private Long id;
-    private String origin;
-    private String destination;
+    private String originAddress;
+    private Double originLatitude;
+    private Double originLongitude;
+    private String destinationAddress;
+    private Double destinationLatitude;
+    private Double destinationLongitude;
     private Double fare;
     private TripStatus status;
     private String clientName;
@@ -22,12 +26,17 @@ public class TripDTO {
 
     public TripDTO() {}
 
-    public TripDTO(Long id, String origin, String destination, Double fare,
-                   TripStatus status, String clientName, String clientPhone,
+    public TripDTO(Long id, String originAddress, Double originLatitude, Double originLongitude,
+                   String destinationAddress, Double destinationLatitude, Double destinationLongitude,
+                   Double fare, TripStatus status, String clientName, String clientPhone,
                    String driverName, String driverLicense, Integer rating) {
         this.id = id;
-        this.origin = origin;
-        this.destination = destination;
+        this.originAddress = originAddress;
+        this.originLatitude = originLatitude;
+        this.originLongitude = originLongitude;
+        this.destinationAddress = destinationAddress;
+        this.destinationLatitude = destinationLatitude;
+        this.destinationLongitude = destinationLongitude;
         this.fare = fare;
         this.status = status;
         this.clientName = clientName;
@@ -46,20 +55,52 @@ public class TripDTO {
         this.id = id;
     }
 
-    public String getOrigin() {
-        return origin;
+    public String getOriginAddress() {
+        return originAddress;
     }
 
-    public void setOrigin(String origin) {
-        this.origin = origin;
+    public void setOriginAddress(String originAddress) {
+        this.originAddress = originAddress;
     }
 
-    public String getDestination() {
-        return destination;
+    public Double getOriginLatitude() {
+        return originLatitude;
     }
 
-    public void setDestination(String destination) {
-        this.destination = destination;
+    public void setOriginLatitude(Double originLatitude) {
+        this.originLatitude = originLatitude;
+    }
+
+    public Double getOriginLongitude() {
+        return originLongitude;
+    }
+
+    public void setOriginLongitude(Double originLongitude) {
+        this.originLongitude = originLongitude;
+    }
+
+    public String getDestinationAddress() {
+        return destinationAddress;
+    }
+
+    public void setDestinationAddress(String destinationAddress) {
+        this.destinationAddress = destinationAddress;
+    }
+
+    public Double getDestinationLatitude() {
+        return destinationLatitude;
+    }
+
+    public void setDestinationLatitude(Double destinationLatitude) {
+        this.destinationLatitude = destinationLatitude;
+    }
+
+    public Double getDestinationLongitude() {
+        return destinationLongitude;
+    }
+
+    public void setDestinationLongitude(Double destinationLongitude) {
+        this.destinationLongitude = destinationLongitude;
     }
 
     public Double getFare() {

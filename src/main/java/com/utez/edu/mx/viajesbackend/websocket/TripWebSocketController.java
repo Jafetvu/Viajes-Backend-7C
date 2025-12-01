@@ -116,12 +116,30 @@ public class TripWebSocketController {
         message.setStatus(trip.getStatus());
         message.setClientId(trip.getClient().getId());
         message.setDriverId(trip.getDriver() != null ? trip.getDriver().getId() : null);
-        message.setOrigin(trip.getOrigin());
-        message.setDestination(trip.getDestination());
+        
+        message.setOriginAddress(trip.getOriginAddress());
+        message.setOriginLatitude(trip.getOriginLatitude());
+        message.setOriginLongitude(trip.getOriginLongitude());
+        
+        message.setDestinationAddress(trip.getDestinationAddress());
+        message.setDestinationLatitude(trip.getDestinationLatitude());
+        message.setDestinationLongitude(trip.getDestinationLongitude());
+        
         message.setFare(trip.getFare());
         message.setDriverCompleted(trip.isDriverCompleted());
         message.setClientCompleted(trip.isClientCompleted());
+        message.setDriverStarted(trip.isDriverStarted()); // Map new field
+        message.setClientStarted(trip.isClientStarted()); // Map new field
         message.setUpdatedAt(trip.getUpdatedAt());
+        
+        // Populate names
+        if (trip.getClient() != null) {
+            message.setClientName(String.format("%s %s", trip.getClient().getName(), trip.getClient().getSurname()).trim());
+        }
+        if (trip.getDriver() != null && trip.getDriver().getUser() != null) {
+            message.setDriverName(String.format("%s %s", trip.getDriver().getUser().getName(), trip.getDriver().getUser().getSurname()).trim());
+        }
+        
         return message;
     }
 }

@@ -6,9 +6,6 @@ import java.time.LocalDateTime;
 
 /**
  * DTO for WebSocket messages about trip status updates.
- *
- * <p>Sent to clients when a trip's status changes, allowing real-time
- * updates for both drivers and passengers.</p>
  */
 public class TripUpdateMessage {
 
@@ -16,13 +13,23 @@ public class TripUpdateMessage {
     private TripStatus status;
     private Long clientId;
     private Long driverId;
-    private String origin;
-    private String destination;
+    private String originAddress;
+    private Double originLatitude;
+    private Double originLongitude;
+    private String destinationAddress;
+    private Double destinationLatitude;
+    private Double destinationLongitude;
     private Double fare;
     private boolean driverCompleted;
     private boolean clientCompleted;
+    private boolean driverStarted;  // New field
+    private boolean clientStarted;  // New field
     private LocalDateTime updatedAt;
     private String message;
+    
+    // Extra info for UI
+    private String clientName;
+    private String driverName;
 
     public TripUpdateMessage() {
     }
@@ -60,20 +67,52 @@ public class TripUpdateMessage {
         this.driverId = driverId;
     }
 
-    public String getOrigin() {
-        return origin;
+    public String getOriginAddress() {
+        return originAddress;
     }
 
-    public void setOrigin(String origin) {
-        this.origin = origin;
+    public void setOriginAddress(String originAddress) {
+        this.originAddress = originAddress;
     }
 
-    public String getDestination() {
-        return destination;
+    public Double getOriginLatitude() {
+        return originLatitude;
     }
 
-    public void setDestination(String destination) {
-        this.destination = destination;
+    public void setOriginLatitude(Double originLatitude) {
+        this.originLatitude = originLatitude;
+    }
+
+    public Double getOriginLongitude() {
+        return originLongitude;
+    }
+
+    public void setOriginLongitude(Double originLongitude) {
+        this.originLongitude = originLongitude;
+    }
+
+    public String getDestinationAddress() {
+        return destinationAddress;
+    }
+
+    public void setDestinationAddress(String destinationAddress) {
+        this.destinationAddress = destinationAddress;
+    }
+
+    public Double getDestinationLatitude() {
+        return destinationLatitude;
+    }
+
+    public void setDestinationLatitude(Double destinationLatitude) {
+        this.destinationLatitude = destinationLatitude;
+    }
+
+    public Double getDestinationLongitude() {
+        return destinationLongitude;
+    }
+
+    public void setDestinationLongitude(Double destinationLongitude) {
+        this.destinationLongitude = destinationLongitude;
     }
 
     public Double getFare() {
@@ -100,6 +139,22 @@ public class TripUpdateMessage {
         this.clientCompleted = clientCompleted;
     }
 
+    public boolean isDriverStarted() {
+        return driverStarted;
+    }
+
+    public void setDriverStarted(boolean driverStarted) {
+        this.driverStarted = driverStarted;
+    }
+
+    public boolean isClientStarted() {
+        return clientStarted;
+    }
+
+    public void setClientStarted(boolean clientStarted) {
+        this.clientStarted = clientStarted;
+    }
+
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
@@ -114,5 +169,21 @@ public class TripUpdateMessage {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getClientName() {
+        return clientName;
+    }
+
+    public void setClientName(String clientName) {
+        this.clientName = clientName;
+    }
+
+    public String getDriverName() {
+        return driverName;
+    }
+
+    public void setDriverName(String driverName) {
+        this.driverName = driverName;
     }
 }
