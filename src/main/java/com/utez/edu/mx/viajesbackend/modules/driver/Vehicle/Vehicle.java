@@ -20,8 +20,8 @@ public class Vehicle {
     @Column(nullable = false)
     private String model;
 
-    @Column(nullable = false)
-    private String plate;  // puedes volverlo unique si lo requieres
+    @Column(nullable = false, unique = true)
+    private String plate;
 
     @Column(nullable = false)
     private String color;

@@ -11,6 +11,7 @@ import com.utez.edu.mx.viajesbackend.modules.user.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 
@@ -69,6 +70,18 @@ public class DriverController {
             @RequestBody DriverDocument document
     ) {
         return driverProfileService.addDocument(driverProfileId, document);
+    }
+
+    /* =======================================
+       AGREGAR DOCUMENTO CON ARCHIVO (UPLOAD)
+       ======================================= */
+    @PostMapping("/profile/{driverProfileId}/documents/upload")
+    public ResponseEntity<?> uploadDocument(
+            @PathVariable Long driverProfileId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("documentType") String documentType
+    ) {
+        return driverProfileService.uploadDocument(driverProfileId, file, documentType);
     }
 
     /* ===========================================

@@ -2,6 +2,7 @@ package com.utez.edu.mx.viajesbackend.modules.driver;
 
 import com.utez.edu.mx.viajesbackend.modules.driver.Documents.DriverDocument;
 import com.utez.edu.mx.viajesbackend.modules.driver.Documents.DriverDocumentRepository;
+import com.utez.edu.mx.viajesbackend.modules.driver.Documents.DriverDocType;
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverAvailability;
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfile;
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfileRepository;
@@ -13,8 +14,11 @@ import com.utez.edu.mx.viajesbackend.utils.CustomResponseEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class DriverProfileService {
@@ -60,7 +64,11 @@ public class DriverProfileService {
         dp.setLicenseNumber(licenseNumber);
 
         driverProfileRepository.save(dp);
-        return customResponseEntity.getOkResponse("Perfil de chofer creado", "ok", 200, null);
+
+        // Return driver profile ID for subsequent calls
+        Map<String, Object> data = new HashMap<>();
+        data.put("driverProfileId", dp.getId());
+        return customResponseEntity.getOkResponse("Perfil de chofer creado", "ok", 200, data);
     }
 
     /** Agregar vehículo al perfil */
@@ -68,6 +76,28 @@ public class DriverProfileService {
     public ResponseEntity<?> addVehicle(Long driverProfileId, Vehicle payload) {
         DriverProfile dp = driverProfileRepository.findById(driverProfileId).orElse(null);
         if (dp == null) return customResponseEntity.get404Response();
+
+        // Validate required fields
+        if (payload.getBrand() == null || payload.getBrand().trim().isEmpty()) {
+            return customResponseEntity.get400Response("La marca del vehículo es obligatoria");
+        }
+        if (payload.getModel() == null || payload.getModel().trim().isEmpty()) {
+            return customResponseEntity.get400Response("El modelo del vehículo es obligatorio");
+        }
+        if (payload.getPlate() == null || payload.getPlate().trim().isEmpty()) {
+            return customResponseEntity.get400Response("La placa del vehículo es obligatoria");
+        }
+        if (payload.getColor() == null || payload.getColor().trim().isEmpty()) {
+            return customResponseEntity.get400Response("El color del vehículo es obligatorio");
+        }
+        if (payload.getYear() == null || payload.getYear() < 1900 || payload.getYear() > 2030) {
+            return customResponseEntity.get400Response("El año del vehículo es inválido");
+        }
+
+        // Check plate uniqueness
+        if (vehicleRepository.existsByPlate(payload.getPlate())) {
+            return customResponseEntity.get400Response("La placa ya está registrada");
+        }
 
         payload.setId(null);
         payload.setDriver(dp);
@@ -85,6 +115,52 @@ public class DriverProfileService {
         payload.setDriver(dp);
         documentRepository.save(payload);
         return customResponseEntity.getOkResponse("Documento agregado", "ok", 200, null);
+    }
+
+    /** Agregar documento con archivo (upload) */
+    @Transactional(rollbackOn = {SQLException.class, Exception.class})
+    public ResponseEntity<?> uploadDocument(Long driverProfileId, MultipartFile file, String documentType) {
+        // Validate driver profile exists
+        DriverProfile dp = driverProfileRepository.findById(driverProfileId).orElse(null);
+        if (dp == null) return customResponseEntity.get404Response();
+
+        // Validate file not empty
+        if (file.isEmpty()) {
+            return customResponseEntity.get400Response("El archivo está vacío");
+        }
+
+        // Validate file size (max 5MB)
+        if (file.getSize() > 5 * 1024 * 1024) {
+            return customResponseEntity.get400Response("El archivo excede 5MB");
+        }
+
+        // Validate MIME type (PDF only)
+        if (file.getContentType() == null || !file.getContentType().equals("application/pdf")) {
+            return customResponseEntity.get400Response("Solo se permiten archivos PDF");
+        }
+
+        // Parse document type
+        DriverDocType docType;
+        try {
+            docType = DriverDocType.valueOf(documentType);
+        } catch (IllegalArgumentException e) {
+            return customResponseEntity.get400Response("Tipo de documento inválido");
+        }
+
+        try {
+            DriverDocument document = new DriverDocument();
+            document.setDriver(dp);
+            document.setType(docType);
+            document.setMimeType(file.getContentType());
+            document.setOriginalName(file.getOriginalFilename());
+            document.setStorageKey("BLOB_" + System.currentTimeMillis());
+            document.setFileData(file.getBytes()); // Store as BLOB
+
+            documentRepository.save(document);
+            return customResponseEntity.getOkResponse("Documento subido exitosamente", "ok", 200, null);
+        } catch (Exception e) {
+            return customResponseEntity.get400Response("Error al procesar el archivo: " + e.getMessage());
+        }
     }
 
     /** Aprobar chofer (User.status = true). Úsalo cuando ya validaste docs y vehículo. */

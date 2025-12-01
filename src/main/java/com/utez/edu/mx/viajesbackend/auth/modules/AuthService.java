@@ -98,11 +98,13 @@ public class AuthService {
 
         userRepository.save(user);
 
-        String msg = dto.isDriver() ? 
-            "Registro exitoso. Tu cuenta de conductor está pendiente de aprobación." : 
-            "Usuario registrado correctamente";
+        Map<String, Object> response = new HashMap<>();
+        response.put("userId", user.getId());
+        response.put("message", dto.isDriver() ?
+            "Registro exitoso. Tu cuenta de conductor está pendiente de aprobación." :
+            "Usuario registrado correctamente");
 
-        return ResponseEntity.ok(Map.of("message", msg));
+        return ResponseEntity.ok(response);
     }
 
     @Transactional
