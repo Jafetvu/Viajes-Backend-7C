@@ -66,8 +66,8 @@ public class AuthController {
             @RequestBody ChangePasswordDto dto,
             @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring(7);
-        String email = jwtUtil.extractUsername(token);
-        long userId = userRepository.findByEmail(email)
+        String username = jwtUtil.extractUsername(token);
+        long userId = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND))
                 .getId();
 

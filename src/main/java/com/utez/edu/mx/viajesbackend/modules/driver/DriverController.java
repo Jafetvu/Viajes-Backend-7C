@@ -1,9 +1,11 @@
 package com.utez.edu.mx.viajesbackend.modules.driver;
 
 import com.utez.edu.mx.viajesbackend.modules.driver.Documents.DriverDocument;
+import com.utez.edu.mx.viajesbackend.modules.driver.Documents.DriverDocumentRepository;
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfile;
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfileRepository;
 import com.utez.edu.mx.viajesbackend.modules.driver.Vehicle.Vehicle;
+import com.utez.edu.mx.viajesbackend.modules.driver.Vehicle.VehicleRepository;
 import com.utez.edu.mx.viajesbackend.modules.user.User;
 import com.utez.edu.mx.viajesbackend.modules.user.UserRepository;
 import jakarta.transaction.Transactional;
@@ -22,13 +24,19 @@ public class DriverController {
     private final DriverProfileRepository driverProfileRepository;
     private final UserRepository userRepository;
     private final DriverProfileService driverProfileService;
+    private final VehicleRepository vehicleRepository;
+    private final DriverDocumentRepository driverDocumentRepository;
 
     public DriverController(DriverProfileRepository driverProfileRepository,
                             UserRepository userRepository,
-                            DriverProfileService driverProfileService) {
+                            DriverProfileService driverProfileService,
+                            VehicleRepository vehicleRepository,
+                            DriverDocumentRepository driverDocumentRepository) {
         this.driverProfileRepository = driverProfileRepository;
         this.userRepository = userRepository;
         this.driverProfileService = driverProfileService;
+        this.vehicleRepository = vehicleRepository;
+        this.driverDocumentRepository = driverDocumentRepository;
     }
 
     /* ============================
@@ -130,15 +138,16 @@ public class DriverController {
         }
 
         DriverProfile dp = maybe.get();
-        // Inicializar colecciones perezosas dentro de la transacción
-        dp.getVehicles().size();
-        dp.getDocuments().size();
+        
+        // Fetch using repositories to ensure data is retrieved
+        List<Vehicle> vehicles = vehicleRepository.findByDriverId(dp.getId());
+        List<DriverDocument> documents = driverDocumentRepository.findByDriverId(dp.getId());
 
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("user", toUserMap(user));
         resp.put("driverProfile", toDriverProfileMap(dp));
-        resp.put("vehicles", toVehiclesList(dp.getVehicles()));
-        resp.put("documents", toDocumentsList(dp.getDocuments()));
+        resp.put("vehicles", toVehiclesList(vehicles));
+        resp.put("documents", toDocumentsList(documents));
         return ResponseEntity.ok(resp);
     }
 
@@ -220,6 +229,42 @@ public class DriverController {
     @PutMapping("/{id}/offline")
     public ResponseEntity<?> setDriverOffline(@PathVariable Long id) {
         return driverProfileService.setOffline(id);
+    }
+
+    /* ============================
+       UPDATE DRIVER PROFILE LICENSE
+       ============================ */
+    @PutMapping("/profile/{driverProfileId}/license")
+    public ResponseEntity<?> updateLicense(
+            @PathVariable Long driverProfileId,
+            @RequestBody Map<String, String> body
+    ) {
+        return driverProfileService.updateLicense(driverProfileId, body.get("licenseNumber"));
+    }
+
+    /* ============================
+       UPDATE VEHICLE
+       ============================ */
+    @PutMapping("/vehicles/{vehicleId}")
+    public ResponseEntity<?> updateVehicle(
+            @PathVariable Long vehicleId,
+            @RequestBody Vehicle vehicle
+    ) {
+        return driverProfileService.updateVehicle(vehicleId, vehicle);
+    }
+
+    /* ============================
+       DOWNLOAD DOCUMENT
+       ============================ */
+    @GetMapping("/documents/{id}/download")
+    public ResponseEntity<?> downloadDocument(@PathVariable Long id) {
+        DriverDocument doc = driverProfileService.getDocumentById(id);
+        if (doc == null) return ResponseEntity.notFound().build();
+        
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + doc.getOriginalName() + "\"")
+                .contentType(org.springframework.http.MediaType.parseMediaType(doc.getMimeType()))
+                .body(doc.getFileData());
     }
 }
 

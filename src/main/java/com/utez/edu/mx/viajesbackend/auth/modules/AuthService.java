@@ -302,6 +302,12 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(dto.newPassword()));
         userRepository.save(user);
 
-        return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
+        UserDetailsImpl userDetails = new UserDetailsImpl(user);
+        String newToken = jwtUtil.generateToken(userDetails);
+
+        return ResponseEntity.ok(Map.of(
+            "message", "Contraseña actualizada correctamente",
+            "token", newToken
+        ));
     }
 }

@@ -131,6 +131,9 @@ public class UserService {
         }
     }
 
+    @Autowired
+    private com.utez.edu.mx.viajesbackend.security.JWTUtil jwtUtil;
+
     @Transactional(rollbackFor = { SQLException.class, Exception.class })
     public ResponseEntity<?> update(User user) {
         Optional<User> optionalFound = userRepository.findById(user.getId());
@@ -139,6 +142,7 @@ public class UserService {
         }
 
         User found = optionalFound.get();
+        String oldUsername = found.getUsername();
 
         // Permite el mismo email/teléfono del propio usuario, rechaza si es de otro
         if (user.getEmail() != null &&
@@ -151,20 +155,40 @@ public class UserService {
         }
 
         try {
-            // Si no mandan password, conserva la actual
-            if (user.getPassword() == null || user.getPassword().isEmpty()) {
-                user.setPassword(found.getPassword());
+            // Actualizar campos permitidos si no son nulos
+            if (user.getName() != null) found.setName(user.getName());
+            if (user.getSurname() != null) found.setSurname(user.getSurname());
+            if (user.getLastname() != null) found.setLastname(user.getLastname());
+            if (user.getEmail() != null) found.setEmail(user.getEmail());
+            if (user.getPhoneNumber() != null) found.setPhoneNumber(user.getPhoneNumber());
+            if (user.getUsername() != null) {
+                // Verificar unicidad si cambia
+                if (!user.getUsername().equals(oldUsername) && userRepository.existsByUsername(user.getUsername())) {
+                     return customResponseEntity.get400Response("El nombre de usuario ya está en uso");
+                }
+                found.setUsername(user.getUsername());
             }
 
-            // Asegura que el id se mantenga (por si llega nulo en el body)
-            user.setId(found.getId());
+            // Si mandan password, actualiza
+            if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+                found.setPassword(user.getPassword());
+            }
 
-            // (Opcional) Si permites actualizar nombre/apellidos y quieres
-            // mantener username en sync solo al crear, no toques username aquí.
-            // Si quisieras recalcularlo en update, hazlo con cautela por colisiones.
-
-            userRepository.save(user);
-            return customResponseEntity.getOkResponse("Usuario modificado correctamente", "ok", 200, null);
+            userRepository.save(found);
+            
+            // Si cambió el username, generar nuevo token
+            String newToken = null;
+            if (!found.getUsername().equals(oldUsername)) {
+                com.utez.edu.mx.viajesbackend.security.UserDetailsImpl userDetails = new com.utez.edu.mx.viajesbackend.security.UserDetailsImpl(found);
+                newToken = jwtUtil.generateToken(userDetails);
+            }
+            
+            java.util.Map<String, Object> data = new java.util.HashMap<>();
+            if (newToken != null) {
+                data.put("token", newToken);
+            }
+            
+            return customResponseEntity.getOkResponse("Usuario modificado correctamente", "ok", 200, data);
         } catch (Exception e) {
             e.printStackTrace();
             return customResponseEntity.get400Response("BAD_REQUEST");

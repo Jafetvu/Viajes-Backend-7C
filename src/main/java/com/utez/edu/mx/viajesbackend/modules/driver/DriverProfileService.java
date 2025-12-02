@@ -241,4 +241,62 @@ public class DriverProfileService {
                 && user.getRole().getId() == ROLE_DRIVER_ID
                 && user.isStatus(); // status true en User
     }
+
+    /** Actualizar número de licencia */
+    @Transactional(rollbackOn = {SQLException.class, Exception.class})
+    public ResponseEntity<?> updateLicense(Long driverProfileId, String licenseNumber) {
+        DriverProfile dp = driverProfileRepository.findById(driverProfileId).orElse(null);
+        if (dp == null) return customResponseEntity.get404Response();
+
+        // Check if license is unique (excluding current profile)
+        if (driverProfileRepository.existsByLicenseNumber(licenseNumber) && !dp.getLicenseNumber().equals(licenseNumber)) {
+            return customResponseEntity.get400Response("La licencia ya está registrada en otro perfil");
+        }
+
+        dp.setLicenseNumber(licenseNumber);
+        driverProfileRepository.save(dp);
+        return customResponseEntity.getOkResponse("Licencia actualizada", "ok", 200, null);
+    }
+
+    /** Actualizar vehículo */
+    @Transactional(rollbackOn = {SQLException.class, Exception.class})
+    public ResponseEntity<?> updateVehicle(Long vehicleId, Vehicle payload) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId).orElse(null);
+        if (vehicle == null) return customResponseEntity.get404Response();
+
+        // Validate required fields
+        if (payload.getBrand() == null || payload.getBrand().trim().isEmpty()) {
+            return customResponseEntity.get400Response("La marca del vehículo es obligatoria");
+        }
+        if (payload.getModel() == null || payload.getModel().trim().isEmpty()) {
+            return customResponseEntity.get400Response("El modelo del vehículo es obligatorio");
+        }
+        if (payload.getPlate() == null || payload.getPlate().trim().isEmpty()) {
+            return customResponseEntity.get400Response("La placa del vehículo es obligatoria");
+        }
+        if (payload.getColor() == null || payload.getColor().trim().isEmpty()) {
+            return customResponseEntity.get400Response("El color del vehículo es obligatorio");
+        }
+        if (payload.getYear() == null || payload.getYear() < 1900 || payload.getYear() > 2030) {
+            return customResponseEntity.get400Response("El año del vehículo es inválido");
+        }
+
+        // Check plate uniqueness (excluding current vehicle)
+        if (vehicleRepository.existsByPlate(payload.getPlate()) && !vehicle.getPlate().equals(payload.getPlate())) {
+            return customResponseEntity.get400Response("La placa ya está registrada");
+        }
+
+        vehicle.setBrand(payload.getBrand());
+        vehicle.setModel(payload.getModel());
+        vehicle.setPlate(payload.getPlate());
+        vehicle.setColor(payload.getColor());
+        vehicle.setYear(payload.getYear());
+        
+        vehicleRepository.save(vehicle);
+        return customResponseEntity.getOkResponse("Vehículo actualizado", "ok", 200, null);
+    }
+
+    public DriverDocument getDocumentById(Long id) {
+        return documentRepository.findById(id).orElse(null);
+    }
 }
