@@ -2,7 +2,6 @@ package com.utez.edu.mx.viajesbackend.modules.rating;
 
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfile;
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfileRepository;
-import com.utez.edu.mx.viajesbackend.modules.trip.TripStatus;
 import com.utez.edu.mx.viajesbackend.modules.rating.DTO.RatingRequestDTO;
 import com.utez.edu.mx.viajesbackend.modules.rating.DTO.RatingResponseDTO;
 import com.utez.edu.mx.viajesbackend.modules.trip.Trip;
@@ -21,8 +20,6 @@ import java.util.*;
 
 /**
  * Servicio que encapsula la lógica para crear y consultar calificaciones.
- * Permite que un cliente califique a un conductor y viceversa, siempre
- * asegurando que el viaje se haya completado y que no existan duplicados.
  */
 @Service
 public class RatingService {
@@ -46,9 +43,7 @@ public class RatingService {
     }
 
     /**
-     * Permite al cliente calificar al conductor. Se verifica que el viaje exista,
-     * pertenezca al cliente, esté completado y que no exista ya una calificación
-     * del cliente para ese viaje.
+     * Permite al cliente calificar al conductor.
      *
      * @param clientId identificador del cliente que califica
      * @param dto datos de la calificación
@@ -59,20 +54,32 @@ public class RatingService {
         Optional<Trip> maybe = tripRepository.findById(dto.getTripId());
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
+        
         if (!Objects.equals(trip.getClient().getId(), clientId)) {
             return customResponseEntity.get400Response("El viaje no pertenece al cliente");
         }
         if (trip.getStatus() != TripStatus.COMPLETED) {
             return customResponseEntity.get400Response("Solo se pueden calificar viajes completados");
         }
-        // Verificar que el cliente no haya calificado previamente
-        Optional<Rating> existing = ratingRepository.findByTripIdAndFromClient(trip.getId(), true);
+
+        // Rater: Cliente (Usuario)
+        User rater = trip.getClient();
+        // Rated: Conductor (Usuario asociado al perfil)
+        if (trip.getDriver() == null || trip.getDriver().getUser() == null) {
+            return customResponseEntity.get400Response("El viaje no tiene conductor asignado válido");
+        }
+        User rated = trip.getDriver().getUser();
+
+        // Verificar que el cliente no haya calificado previamente este viaje
+        Optional<Rating> existing = ratingRepository.findByTripIdAndRaterUser_Id(trip.getId(), rater.getId());
         if (existing.isPresent()) {
             return customResponseEntity.get400Response("El viaje ya ha sido calificado por el cliente");
         }
+
         Rating rating = new Rating();
         rating.setTrip(trip);
-        rating.setFromClient(true);
+        rating.setRaterUser(rater);
+        rating.setRatedUser(rated);
         rating.setRating(dto.getRating());
         rating.setComment(dto.getComment());
         rating.setCreatedAt(LocalDateTime.now());
@@ -81,11 +88,9 @@ public class RatingService {
     }
 
     /**
-     * Permite al conductor calificar al cliente. Se verifica que el viaje exista,
-     * esté asignado al conductor correspondiente, esté completado y que no exista
-     * ya una calificación del conductor para ese viaje.
+     * Permite al conductor calificar al cliente.
      *
-     * @param driverId identificador del conductor que califica
+     * @param driverId identificador del conductor (DriverProfile ID) que califica
      * @param dto datos de la calificación
      * @return respuesta HTTP con el resultado
      */
@@ -94,20 +99,39 @@ public class RatingService {
         Optional<Trip> maybe = tripRepository.findById(dto.getTripId());
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
-        if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), driverId)) {
+
+        if (trip.getDriver() == null) {
+            return customResponseEntity.get400Response("El viaje no tiene conductor asignado");
+        }
+
+        boolean isProfileId = Objects.equals(trip.getDriver().getId(), driverId);
+        boolean isUserId = trip.getDriver().getUser() != null && Objects.equals(trip.getDriver().getUser().getId(), driverId);
+
+        if (!isProfileId && !isUserId) {
             return customResponseEntity.get400Response("El viaje no está asignado a este conductor");
         }
         if (trip.getStatus() != TripStatus.COMPLETED) {
             return customResponseEntity.get400Response("Solo se pueden calificar viajes completados");
         }
+        
+        // Rater: Conductor (Usuario)
+        if (trip.getDriver().getUser() == null) {
+            return customResponseEntity.get400Response("El conductor no tiene un usuario válido asociado");
+        }
+        User rater = trip.getDriver().getUser();
+        // Rated: Cliente (Usuario)
+        User rated = trip.getClient();
+
         // Verificar que el conductor no haya calificado previamente al cliente
-        Optional<Rating> existing = ratingRepository.findByTripIdAndFromClient(trip.getId(), false);
+        Optional<Rating> existing = ratingRepository.findByTripIdAndRaterUser_Id(trip.getId(), rater.getId());
         if (existing.isPresent()) {
             return customResponseEntity.get400Response("El viaje ya ha sido calificado por el conductor");
         }
+
         Rating rating = new Rating();
         rating.setTrip(trip);
-        rating.setFromClient(false);
+        rating.setRaterUser(rater);
+        rating.setRatedUser(rated);
         rating.setRating(dto.getRating());
         rating.setComment(dto.getComment());
         rating.setCreatedAt(LocalDateTime.now());
@@ -118,39 +142,66 @@ public class RatingService {
     /**
      * Obtiene el promedio y la lista de calificaciones recibidas por un conductor.
      *
-     * @param driverId identificador del conductor
+     * @param driverId identificador del perfil del conductor
      * @return respuesta HTTP con el promedio y el listado de calificaciones
      */
     @Transactional
     public ResponseEntity<?> getDriverRatings(Long driverId) {
-        // Verificar que el conductor exista
         Optional<DriverProfile> driverOpt = driverProfileRepository.findById(driverId);
         if (driverOpt.isEmpty()) return customResponseEntity.get404Response();
-        List<Rating> ratings = ratingRepository.findByTrip_Driver_IdAndFromClient(driverId, true);
+        
+        User driverUser = driverOpt.get().getUser();
+        if (driverUser == null) return customResponseEntity.get404Response();
+
+        return getRatingsForUser(driverUser, "Calificaciones del conductor");
+    }
+
+    /**
+     * Obtiene el promedio y la lista de calificaciones recibidas por un cliente.
+     *
+     * @param clientId identificador del cliente (User ID)
+     * @return respuesta HTTP con el promedio y el listado de calificaciones
+     */
+    @Transactional
+    public ResponseEntity<?> getClientRatings(Long clientId) {
+        Optional<User> clientOpt = userRepository.findById(clientId);
+        if (clientOpt.isEmpty()) return customResponseEntity.get404Response();
+
+        return getRatingsForUser(clientOpt.get(), "Calificaciones del cliente");
+    }
+
+    /**
+     * Método auxiliar para obtener calificaciones de un usuario genérico.
+     */
+    private ResponseEntity<?> getRatingsForUser(User user, String message) {
+        List<Rating> ratings = ratingRepository.findByRatedUser_Id(user.getId());
+
         if (ratings.isEmpty()) {
             Map<String, Object> resp = new LinkedHashMap<>();
             resp.put("average", null);
             resp.put("ratings", Collections.emptyList());
             return customResponseEntity.getOkResponse("No hay calificaciones registradas", "ok", 200, resp);
         }
+
         double sum = 0.0;
         List<RatingResponseDTO> out = new ArrayList<>();
         for (Rating r : ratings) {
             sum += (r.getRating() != null ? r.getRating() : 0);
-            // Nombre del cliente que emite la calificación
-            User rater = r.getTrip().getClient();
-            String raterName = null;
+            
+            User rater = r.getRaterUser();
+            String raterName = "Desconocido";
             if (rater != null) {
                 raterName = String.format("%s %s %s",
                         rater.getName(),
                         rater.getSurname(),
                         rater.getLastname() != null ? rater.getLastname() : "").trim();
             }
+
             RatingResponseDTO dtoOut = new RatingResponseDTO(
                     r.getId(),
+                    r.getTrip().getId(),
                     r.getRating(),
                     r.getComment(),
-                    r.getFromClient(),
                     raterName,
                     r.getCreatedAt()
             );
@@ -160,55 +211,39 @@ public class RatingService {
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("average", avg);
         resp.put("ratings", out);
-        return customResponseEntity.getOkResponse("Calificaciones del conductor", "ok", 200, resp);
+        return customResponseEntity.getOkResponse(message, "ok", 200, resp);
     }
 
     /**
-     * Obtiene el promedio y la lista de calificaciones recibidas por un cliente.
+     * Obtiene las calificaciones asociadas a un viaje específico.
      *
-     * @param clientId identificador del cliente
-     * @return respuesta HTTP con el promedio y el listado de calificaciones
+     * @param tripId identificador del viaje
+     * @return lista de calificaciones del viaje
      */
     @Transactional
-    public ResponseEntity<?> getClientRatings(Long clientId) {
-        // Verificar que el cliente exista
-        User client = userRepository.findById(clientId).orElse(null);
-        if (client == null) return customResponseEntity.get404Response();
-        List<Rating> ratings = ratingRepository.findByTrip_Client_IdAndFromClient(clientId, false);
-        if (ratings.isEmpty()) {
-            Map<String, Object> resp = new LinkedHashMap<>();
-            resp.put("average", null);
-            resp.put("ratings", Collections.emptyList());
-            return customResponseEntity.getOkResponse("No hay calificaciones registradas", "ok", 200, resp);
-        }
-        double sum = 0.0;
+    public ResponseEntity<?> getRatingsByTrip(Long tripId) {
+        List<Rating> ratings = ratingRepository.findByTrip_Id(tripId);
         List<RatingResponseDTO> out = new ArrayList<>();
+        
         for (Rating r : ratings) {
-            sum += (r.getRating() != null ? r.getRating() : 0);
-            // Nombre del conductor que emite la calificación
-            DriverProfile rater = r.getTrip().getDriver();
-            String raterName = null;
-            if (rater != null && rater.getUser() != null) {
-                User u = rater.getUser();
+            User rater = r.getRaterUser();
+            String raterName = "Desconocido";
+            if (rater != null) {
                 raterName = String.format("%s %s %s",
-                        u.getName(),
-                        u.getSurname(),
-                        u.getLastname() != null ? u.getLastname() : "").trim();
+                        rater.getName(),
+                        rater.getSurname(),
+                        rater.getLastname() != null ? rater.getLastname() : "").trim();
             }
-            RatingResponseDTO dtoOut = new RatingResponseDTO(
+
+            out.add(new RatingResponseDTO(
                     r.getId(),
+                    r.getTrip().getId(),
                     r.getRating(),
                     r.getComment(),
-                    r.getFromClient(),
                     raterName,
                     r.getCreatedAt()
-            );
-            out.add(dtoOut);
+            ));
         }
-        double avg = sum / ratings.size();
-        Map<String, Object> resp = new LinkedHashMap<>();
-        resp.put("average", avg);
-        resp.put("ratings", out);
-        return customResponseEntity.getOkResponse("Calificaciones del cliente", "ok", 200, resp);
+        return customResponseEntity.getOkResponse("Calificaciones del viaje", "ok", 200, out);
     }
 }

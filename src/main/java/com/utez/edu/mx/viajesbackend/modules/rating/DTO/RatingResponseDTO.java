@@ -9,20 +9,20 @@ import java.time.LocalDateTime;
 public class RatingResponseDTO {
 
     private Long id;
+    private Long tripId;
     private Integer rating;
     private String comment;
-    private Boolean fromClient;
     private String raterName;
     private LocalDateTime createdAt;
 
     public RatingResponseDTO() {}
 
-    public RatingResponseDTO(Long id, Integer rating, String comment,
-                             Boolean fromClient, String raterName, LocalDateTime createdAt) {
+    public RatingResponseDTO(Long id, Long tripId, Integer rating, String comment,
+                             String raterName, LocalDateTime createdAt) {
         this.id = id;
+        this.tripId = tripId;
         this.rating = rating;
         this.comment = comment;
-        this.fromClient = fromClient;
         this.raterName = raterName;
         this.createdAt = createdAt;
     }
@@ -33,6 +33,14 @@ public class RatingResponseDTO {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getTripId() {
+        return tripId;
+    }
+
+    public void setTripId(Long tripId) {
+        this.tripId = tripId;
     }
 
     public Integer getRating() {
@@ -49,14 +57,6 @@ public class RatingResponseDTO {
 
     public void setComment(String comment) {
         this.comment = comment;
-    }
-
-    public Boolean getFromClient() {
-        return fromClient;
-    }
-
-    public void setFromClient(Boolean fromClient) {
-        this.fromClient = fromClient;
     }
 
     public String getRaterName() {

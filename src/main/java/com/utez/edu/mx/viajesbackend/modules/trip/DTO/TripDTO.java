@@ -2,6 +2,8 @@ package com.utez.edu.mx.viajesbackend.modules.trip.DTO;
 
 import com.utez.edu.mx.viajesbackend.modules.trip.TripStatus;
 
+import java.time.LocalDateTime;
+
 /**
  * DTO de salida para un viaje. Simplifica la representación de la entidad
  * {@link com.utez.edu.mx.viajesbackend.modules.trip.Trip} al exponer
@@ -23,13 +25,14 @@ public class TripDTO {
     private String driverName;
     private String driverLicense;
     private Integer rating;
+    private LocalDateTime createdAt;
 
     public TripDTO() {}
 
     public TripDTO(Long id, String originAddress, Double originLatitude, Double originLongitude,
                    String destinationAddress, Double destinationLatitude, Double destinationLongitude,
                    Double fare, TripStatus status, String clientName, String clientPhone,
-                   String driverName, String driverLicense, Integer rating) {
+                   String driverName, String driverLicense, Integer rating, LocalDateTime createdAt) {
         this.id = id;
         this.originAddress = originAddress;
         this.originLatitude = originLatitude;
@@ -44,6 +47,7 @@ public class TripDTO {
         this.driverName = driverName;
         this.driverLicense = driverLicense;
         this.rating = rating;
+        this.createdAt = createdAt;
     }
 
     // Getters y setters
@@ -157,5 +161,13 @@ public class TripDTO {
 
     public void setRating(Integer rating) {
         this.rating = rating;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

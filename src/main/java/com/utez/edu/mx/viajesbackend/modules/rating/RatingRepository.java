@@ -5,37 +5,32 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Repositorio JPA para la entidad {@link Rating}. Proporciona métodos para
- * consultar calificaciones asociadas a un viaje y filtrar por el origen
- * (cliente o conductor), así como para obtener todas las calificaciones
- * recibidas por un conductor o un cliente.
+ * Repositorio JPA para la entidad {@link Rating}.
  */
 public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     /**
-     * Busca una calificación específica de un viaje según si proviene del cliente.
+     * Busca una calificación específica de un viaje realizada por un usuario concreto.
      *
      * @param tripId identificador del viaje
-     * @param fromClient indica si la calificación proviene del cliente
+     * @param raterUserId identificador del usuario que califica
      * @return calificación correspondiente, o vacío si no existe
      */
-    Optional<Rating> findByTripIdAndFromClient(Long tripId, Boolean fromClient);
+    Optional<Rating> findByTripIdAndRaterUser_Id(Long tripId, Long raterUserId);
 
     /**
-     * Devuelve las calificaciones otorgadas por clientes hacia un conductor.
+     * Devuelve las calificaciones recibidas por un usuario.
      *
-     * @param driverId identificador del conductor
-     * @param fromClient debe ser {@code true} para indicar que provienen de clientes
-     * @return lista de calificaciones recibidas por el conductor
+     * @param ratedUserId identificador del usuario calificado
+     * @return lista de calificaciones recibidas
      */
-    List<Rating> findByTrip_Driver_IdAndFromClient(Long driverId, Boolean fromClient);
+    List<Rating> findByRatedUser_Id(Long ratedUserId);
 
     /**
-     * Devuelve las calificaciones otorgadas por conductores hacia un cliente.
+     * Busca todas las calificaciones asociadas a un viaje.
      *
-     * @param clientId identificador del cliente
-     * @param fromClient debe ser {@code false} para indicar que provienen de conductores
-     * @return lista de calificaciones recibidas por el cliente
+     * @param tripId identificador del viaje
+     * @return lista de calificaciones del viaje
      */
-    List<Rating> findByTrip_Client_IdAndFromClient(Long clientId, Boolean fromClient);
+    List<Rating> findByTrip_Id(Long tripId);
 }

@@ -488,7 +488,8 @@ public class TripService {
                 clientPhone,
                 driverName,
                 driverLicense,
-                trip.getRating()
+                trip.getRating(),
+                trip.getCreatedAt()
         );
     }
 

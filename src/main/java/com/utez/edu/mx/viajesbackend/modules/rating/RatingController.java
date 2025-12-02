@@ -68,4 +68,15 @@ public class RatingController {
     public ResponseEntity<?> getClientRatings(@PathVariable Long clientId) {
         return ratingService.getClientRatings(clientId);
     }
+
+    /**
+     * Obtiene las calificaciones asociadas a un viaje específico.
+     *
+     * @param tripId identificador del viaje
+     * @return lista de calificaciones
+     */
+    @GetMapping("/trip/{tripId}")
+    public ResponseEntity<?> getRatingsByTrip(@PathVariable Long tripId) {
+        return ratingService.getRatingsByTrip(tripId);
+    }
 }
