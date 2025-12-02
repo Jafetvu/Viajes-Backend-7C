@@ -174,6 +174,8 @@ public class UserService {
                 found.setPassword(user.getPassword());
             }
 
+            found.setStatus(user.isStatus());
+
             userRepository.save(found);
             
             // Si cambió el username, generar nuevo token

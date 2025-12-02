@@ -4,10 +4,13 @@ import com.utez.edu.mx.viajesbackend.modules.role.Role;
 import com.utez.edu.mx.viajesbackend.modules.role.RoleRepository;
 import com.utez.edu.mx.viajesbackend.modules.user.User;
 import com.utez.edu.mx.viajesbackend.modules.user.UserRepository;
+import com.utez.edu.mx.viajesbackend.modules.tariff.Tariff;
+import com.utez.edu.mx.viajesbackend.modules.tariff.TariffRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Component
@@ -15,11 +18,14 @@ public class DataInitializer implements CommandLineRunner {
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
+    private final TariffRepository tariffRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public DataInitializer(RoleRepository roleRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public DataInitializer(RoleRepository roleRepository, UserRepository userRepository,
+                          TariffRepository tariffRepository, PasswordEncoder passwordEncoder) {
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
+        this.tariffRepository = tariffRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -30,6 +36,7 @@ public class DataInitializer implements CommandLineRunner {
         createRoleIfNotFound("CONDUCTOR");
 
         createAdminUserIfNotFound();
+        createDefaultTariffIfNotFound();
     }
 
     private void createRoleIfNotFound(String name) {
@@ -62,6 +69,20 @@ public class DataInitializer implements CommandLineRunner {
             } else {
                 System.out.println("ADMIN role not found, cannot create admin user.");
             }
+        }
+    }
+
+    private void createDefaultTariffIfNotFound() {
+        Optional<Tariff> activeTariff = tariffRepository.findActiveTariff();
+        if (activeTariff.isEmpty()) {
+            Tariff tariff = new Tariff();
+            tariff.setTariffValue(50.0);
+            tariff.setModificationDate(LocalDateTime.now());
+            tariff.setModifierName("Sistema");
+            tariff.setChangeReason("Tarifa inicial del sistema");
+            tariff.setIsActive(true);
+            tariffRepository.save(tariff);
+            System.out.println("Default tariff created: $50.00 MXN");
         }
     }
 }
