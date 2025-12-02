@@ -11,8 +11,6 @@ import com.utez.edu.mx.viajesbackend.modules.user.UserRepository;
 import com.utez.edu.mx.viajesbackend.utils.CustomResponseEntity;
 import com.utez.edu.mx.viajesbackend.websocket.TripWebSocketController;
 import jakarta.transaction.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -25,8 +23,6 @@ import java.util.*;
  */
 @Service
 public class TripService {
-
-    private static final Logger logger = LoggerFactory.getLogger(TripService.class);
 
     private final TripRepository tripRepository;
     private final UserRepository userRepository;
