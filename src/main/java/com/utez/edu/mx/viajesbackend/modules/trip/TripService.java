@@ -492,8 +492,4 @@ public class TripService {
         );
     }
 
-    private boolean isValidTransition(TripStatus current, TripStatus next) {
-        if (current == TripStatus.ACCEPTED && next == TripStatus.IN_PROGRESS) return true;
-        return false;
-    }
 }

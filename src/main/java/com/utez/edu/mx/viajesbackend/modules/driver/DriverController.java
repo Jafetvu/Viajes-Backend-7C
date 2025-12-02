@@ -1,11 +1,9 @@
 package com.utez.edu.mx.viajesbackend.modules.driver;
 
 import com.utez.edu.mx.viajesbackend.modules.driver.Documents.DriverDocument;
-import com.utez.edu.mx.viajesbackend.modules.driver.Documents.DriverDocumentRepository;
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfile;
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfileRepository;
 import com.utez.edu.mx.viajesbackend.modules.driver.Vehicle.Vehicle;
-import com.utez.edu.mx.viajesbackend.modules.driver.Vehicle.VehicleRepository;
 import com.utez.edu.mx.viajesbackend.modules.user.User;
 import com.utez.edu.mx.viajesbackend.modules.user.UserRepository;
 import jakarta.transaction.Transactional;
@@ -22,19 +20,13 @@ public class DriverController {
     private static final int ROLE_DRIVER_ID = 3;
 
     private final DriverProfileRepository driverProfileRepository;
-    private final VehicleRepository vehicleRepository;
-    private final DriverDocumentRepository documentRepository;
     private final UserRepository userRepository;
     private final DriverProfileService driverProfileService;
 
     public DriverController(DriverProfileRepository driverProfileRepository,
-                            VehicleRepository vehicleRepository,
-                            DriverDocumentRepository documentRepository,
                             UserRepository userRepository,
                             DriverProfileService driverProfileService) {
         this.driverProfileRepository = driverProfileRepository;
-        this.vehicleRepository = vehicleRepository;
-        this.documentRepository = documentRepository;
         this.userRepository = userRepository;
         this.driverProfileService = driverProfileService;
     }

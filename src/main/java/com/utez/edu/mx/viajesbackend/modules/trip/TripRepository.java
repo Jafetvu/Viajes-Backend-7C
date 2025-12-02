@@ -1,6 +1,9 @@
 package com.utez.edu.mx.viajesbackend.modules.trip;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.util.List;
 
 /**
@@ -24,4 +27,14 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
      * @return lista de viajes atendidos por el conductor
      */
     List<Trip> findByDriverId(Long driverId);
+
+    // Count trips by status
+    long countByStatus(TripStatus status);
+
+    // Count trips by multiple statuses
+    long countByStatusIn(List<TripStatus> statuses);
+
+    // Sum fare for trips with specific status
+    @Query("SELECT SUM(t.fare) FROM Trip t WHERE t.status = :status")
+    Double sumFareByStatus(@Param("status") TripStatus status);
 }

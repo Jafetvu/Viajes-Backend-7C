@@ -2,7 +2,6 @@ package com.utez.edu.mx.viajesbackend.modules.rating;
 
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfile;
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfileRepository;
-import com.utez.edu.mx.viajesbackend.modules.trip.TripStatus;
 import com.utez.edu.mx.viajesbackend.modules.rating.DTO.RatingRequestDTO;
 import com.utez.edu.mx.viajesbackend.modules.rating.DTO.RatingResponseDTO;
 import com.utez.edu.mx.viajesbackend.modules.trip.Trip;
