@@ -1,8 +1,13 @@
 package com.utez.edu.mx.viajesbackend.modules.user;
 
+import com.utez.edu.mx.viajesbackend.modules.user.DTO.PaginatedUsersDTO;
 import com.utez.edu.mx.viajesbackend.modules.user.DTO.UserDTO;
 import com.utez.edu.mx.viajesbackend.utils.CustomResponseEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +40,7 @@ public class UserService {
                 u.isStatus());
     }
 
-    // Buscar a todos los usuarios
+    // Get all users without pagination
     @Transactional(readOnly = true)
     public ResponseEntity<?> findAll() {
         List<UserDTO> list = new ArrayList<>();
@@ -50,6 +55,31 @@ public class UserService {
             }
         }
         return customResponseEntity.getOkResponse(message, "ok", 200, list);
+    }
+
+    // Get users with pagination and filters
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> findAllPaginated(int page, int size, Integer roleId, 
+                                               Boolean status, String search) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        
+        Page<User> usersPage = userRepository.findAllWithFilters(roleId, status, search, pageable);
+        
+        List<UserDTO> content = new ArrayList<>();
+        for (User u : usersPage.getContent()) {
+            content.add(transformUserToDTO(u));
+        }
+        
+        PaginatedUsersDTO result = new PaginatedUsersDTO(
+            content,
+            usersPage.getTotalElements(),
+            usersPage.getTotalPages(),
+            usersPage.getNumber(),
+            usersPage.getSize()
+        );
+        
+        String message = content.isEmpty() ? "No hay usuarios registrados" : "Usuarios encontrados";
+        return customResponseEntity.getOkResponse(message, "ok", 200, result);
     }
 
     // Buscar usuario por id
