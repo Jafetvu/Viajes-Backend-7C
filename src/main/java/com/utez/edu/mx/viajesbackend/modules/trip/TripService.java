@@ -76,12 +76,12 @@ public class TripService {
         notificationService.createAndSendNotification(
                 client.get().getId(),
                 NotificationType.OK,
-                "Trip Requested",
-                "Your trip has been requested.",
+                "Viaje Solicitado",
+                "Tu viaje ha sido solicitado exitosamente.",
                 savedTrip.getId()
         );
 
-        return customResponseEntity.getOkResponse("Trip requested", "ok", 200, convertToDTO(savedTrip));
+        return customResponseEntity.getOkResponse("Viaje solicitado exitosamente", "ok", 200, convertToDTO(savedTrip));
     }
 
     @Transactional
@@ -90,7 +90,7 @@ public class TripService {
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
         if (!Objects.equals(trip.getClient().getId(), clientId)) {
-            return customResponseEntity.get400Response("Unauthorized");
+            return customResponseEntity.get400Response("No autorizado");
         }
         return customResponseEntity.getOkResponse("Detalle del viaje", "ok", 200, convertToDTO(trip));
     }
@@ -101,10 +101,10 @@ public class TripService {
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
         if (!Objects.equals(trip.getClient().getId(), clientId)) {
-            return customResponseEntity.get400Response("Unauthorized");
+            return customResponseEntity.get400Response("No autorizado");
         }
         if (trip.getStatus() == TripStatus.COMPLETED) {
-            return customResponseEntity.get400Response("Cannot cancel completed trip");
+            return customResponseEntity.get400Response("No se puede cancelar un viaje completado");
         }
         trip.setStatus(TripStatus.CANCELLED);
         trip.setCancelReason(reason);
@@ -124,16 +124,16 @@ public class TripService {
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
         if (!Objects.equals(trip.getClient().getId(), clientId)) {
-            return customResponseEntity.get400Response("Unauthorized");
+            return customResponseEntity.get400Response("No autorizado");
         }
         if (trip.getStatus() != TripStatus.COMPLETED) {
-            return customResponseEntity.get400Response("Trip not completed");
+            return customResponseEntity.get400Response("El viaje aún no ha sido completado");
         }
         trip.setRating(dto.getRating());
         trip.setComment(dto.getComment());
         trip.setUpdatedAt(LocalDateTime.now());
         tripRepository.save(trip);
-        return customResponseEntity.getOkResponse("Rated", "ok", 200, null);
+        return customResponseEntity.getOkResponse("Calificación enviada", "ok", 200, null);
     }
 
     @Transactional
@@ -143,7 +143,7 @@ public class TripService {
         for (Trip t : trips) {
             out.add(convertToDTO(t));
         }
-        return customResponseEntity.getOkResponse("History", "ok", 200, out);
+        return customResponseEntity.getOkResponse("Historial de viajes", "ok", 200, out);
     }
 
     @Transactional
@@ -155,7 +155,7 @@ public class TripService {
                 out.add(convertToDTO(t));
             }
         }
-        return customResponseEntity.getOkResponse("Assigned trips", "ok", 200, out);
+        return customResponseEntity.getOkResponse("Viajes asignados", "ok", 200, out);
     }
 
     @Transactional
@@ -167,7 +167,7 @@ public class TripService {
                 out.add(convertToDTO(t));
             }
         }
-        return customResponseEntity.getOkResponse("Available trips", "ok", 200, out);
+        return customResponseEntity.getOkResponse("Viajes disponibles", "ok", 200, out);
     }
 
     @Transactional(rollbackOn = {SQLException.class, Exception.class})
@@ -176,7 +176,7 @@ public class TripService {
         if (maybe.isEmpty()) return customResponseEntity.get404Response();
         Trip trip = maybe.get();
         if (trip.getStatus() != TripStatus.REQUESTED || trip.getDriver() != null) {
-            return customResponseEntity.get400Response("Unavailable");
+            return customResponseEntity.get400Response("Viaje no disponibles");
         }
 
         DriverProfile driver = null;
@@ -200,7 +200,7 @@ public class TripService {
 
         if (driver == null) return customResponseEntity.get404Response();
         if (driver.getAvailability() != DriverAvailability.DISPONIBLE) {
-            return customResponseEntity.get400Response("Driver not available");
+            return customResponseEntity.get400Response("Conductor No disponible");
         }
 
         trip.setDriver(driver);
@@ -211,9 +211,9 @@ public class TripService {
         driverProfileRepository.save(driver);
 
         tripWebSocketController.sendTripUpdateToClient(trip.getClient().getUsername(), savedTrip, "Trip accepted");
-        notificationService.createAndSendNotification(trip.getClient().getId(), NotificationType.OK, "Trip Accepted", "Driver assigned", savedTrip.getId());
+        notificationService.createAndSendNotification(trip.getClient().getId(), NotificationType.OK, "Viaje aceptado", "Conductor asignado a tu viaje", savedTrip.getId());
 
-        return customResponseEntity.getOkResponse("Trip accepted", "ok", 200, null);
+        return customResponseEntity.getOkResponse("Viaje Aceptado", "ok", 200, null);
     }
 
     @Transactional(rollbackOn = {SQLException.class, Exception.class})
@@ -226,11 +226,11 @@ public class TripService {
              trip.setStatus(TripStatus.CANCELLED);
              trip.setUpdatedAt(LocalDateTime.now());
              tripRepository.save(trip);
-             return customResponseEntity.getOkResponse("Trip cancelled", "ok", 200, null);
+             return customResponseEntity.getOkResponse("Viaje Cancelado", "ok", 200, null);
         }
 
         if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), driverId)) {
-            return customResponseEntity.get400Response("Unauthorized");
+            return customResponseEntity.get400Response("No Autorizado");
         }
         trip.setStatus(TripStatus.CANCELLED);
         trip.setUpdatedAt(LocalDateTime.now());
@@ -238,10 +238,10 @@ public class TripService {
         trip.getDriver().setAvailability(DriverAvailability.DISPONIBLE);
         driverProfileRepository.save(trip.getDriver());
 
-        tripWebSocketController.sendTripUpdateToClient(trip.getClient().getUsername(), savedTrip, "Trip rejected");
-        notificationService.createAndSendNotification(trip.getClient().getId(), NotificationType.WARN, "Trip Cancelled", "Driver cancelled", savedTrip.getId());
+        tripWebSocketController.sendTripUpdateToClient(trip.getClient().getUsername(), savedTrip, "Viaje rechazado");
+        notificationService.createAndSendNotification(trip.getClient().getId(), NotificationType.WARN, "Viaje cancelado", "El conductor canceló el viaje", savedTrip.getId());
 
-        return customResponseEntity.getOkResponse("Trip rejected", "ok", 200, null);
+        return customResponseEntity.getOkResponse("Viaje Rechazado", "ok", 200, null);
     }
 
     @Transactional(rollbackOn = {SQLException.class, Exception.class})
@@ -257,7 +257,7 @@ public class TripService {
         }
 
         if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), effectiveDriverId)) {
-             return customResponseEntity.get400Response("Unauthorized");
+             return customResponseEntity.get400Response("No Autorizado");
         }
         
         // Send notification/WS update with a specific message or custom field
@@ -266,12 +266,12 @@ public class TripService {
         notificationService.createAndSendNotification(
                 trip.getClient().getId(),
                 NotificationType.INFO,
-                "Driver Arrived",
-                "Your driver has arrived at the pickup location.",
+                "Tu Conductor ha llegado",
+                "Tu conductor ha llegado al punto de partida.",
                 trip.getId()
         );
         
-        return customResponseEntity.getOkResponse("Arrival notified", "ok", 200, null);
+        return customResponseEntity.getOkResponse("Llegada notificada al cliente", "ok", 200, null);
     }
 
     @Transactional(rollbackOn = {SQLException.class, Exception.class})
@@ -287,7 +287,7 @@ public class TripService {
         }
 
         if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), effectiveDriverId)) {
-            return customResponseEntity.get400Response("Unauthorized");
+            return customResponseEntity.get400Response("No Autorizado");
         }
 
         // Send notification/WS update
@@ -298,12 +298,12 @@ public class TripService {
         notificationService.createAndSendNotification(
                 trip.getClient().getId(),
                 NotificationType.INFO,
-                "Arrived at Destination",
-                "Driver has arrived at the destination.",
+                "Llegaste a tu destino",
+                "El conductor ha llegado al destino.",
                 trip.getId()
         );
 
-        return customResponseEntity.getOkResponse("Dropoff arrival notified", "ok", 200, null);
+        return customResponseEntity.getOkResponse("Llegada al destino notificada", "ok", 200, null);
     }
 
     // --- START TRIP LOGIC (DUAL CONFIRMATION) ---
@@ -321,7 +321,7 @@ public class TripService {
         }
 
         if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), effectiveDriverId)) {
-            return customResponseEntity.get400Response("Unauthorized");
+            return customResponseEntity.get400Response("No Autorizado");
         }
 
         trip.setDriverStarted(true);
@@ -335,7 +335,7 @@ public class TripService {
         Trip trip = maybe.get();
 
         if (!Objects.equals(trip.getClient().getId(), clientId)) {
-            return customResponseEntity.get400Response("Unauthorized");
+            return customResponseEntity.get400Response("No Autorizado");
         }
 
         trip.setClientStarted(true);
@@ -350,17 +350,17 @@ public class TripService {
             trip.setUpdatedAt(LocalDateTime.now());
             
             // Notify both
-            tripWebSocketController.sendTripUpdateToBoth(trip, "Trip Started");
-            notificationService.createAndSendNotification(trip.getClient().getId(), NotificationType.INFO, "Trip Started", "Trip is now in progress", trip.getId());
-            notificationService.createAndSendNotification(trip.getDriver().getUser().getId(), NotificationType.INFO, "Trip Started", "Trip is now in progress", trip.getId());
+            tripWebSocketController.sendTripUpdateToBoth(trip, "Viaje iniciado correctamente");
+            notificationService.createAndSendNotification(trip.getClient().getId(), NotificationType.INFO, "Viaje Iniciado", "El viaje está en progreso", trip.getId());
+            notificationService.createAndSendNotification(trip.getDriver().getUser().getId(), NotificationType.INFO, "Viaje Iniciado", "El viaje está en progreso", trip.getId());
         } else {
             // Notify the other party that one has confirmed
-            tripWebSocketController.sendTripUpdateToBoth(trip, "Waiting for start confirmation");
+            tripWebSocketController.sendTripUpdateToBoth(trip, "Esperando confirmación de inicio");
         }
         
         tripRepository.save(trip);
         
-        String msg = bothStarted ? "Trip started" : "Confirmation received. Waiting for other party.";
+        String msg = bothStarted ? "Viaje iniciado" : "Confirmación recibida. Esperando al otro usuario.";
         return customResponseEntity.getOkResponse(msg, "ok", 200, null);
     }
 
@@ -388,7 +388,7 @@ public class TripService {
         }
 
         if (trip.getDriver() == null || !Objects.equals(trip.getDriver().getId(), effectiveDriverId)) {
-            return customResponseEntity.get400Response("Unauthorized");
+            return customResponseEntity.get400Response("No Autorizado");
         }
 
         trip.setDriverCompleted(true);
@@ -402,7 +402,7 @@ public class TripService {
         Trip trip = maybe.get();
 
         if (!Objects.equals(trip.getClient().getId(), clientId)) {
-            return customResponseEntity.get400Response("Unauthorized");
+            return customResponseEntity.get400Response("No Autorizado");
         }
 
         trip.setClientCompleted(true);
@@ -422,16 +422,16 @@ public class TripService {
             driverProfileRepository.save(driver);
 
             // Notify both
-            tripWebSocketController.sendTripUpdateToBoth(trip, "Trip Completed");
-            notificationService.createAndSendNotification(trip.getClient().getId(), NotificationType.OK, "Trip Completed", "Trip completed successfully", trip.getId());
-            notificationService.createAndSendNotification(trip.getDriver().getUser().getId(), NotificationType.OK, "Trip Completed", "Trip completed successfully", trip.getId());
+            tripWebSocketController.sendTripUpdateToBoth(trip, "Viaje Finalizado correctamente");
+            notificationService.createAndSendNotification(trip.getClient().getId(), NotificationType.OK, "Viaje completado", "El viaje se completó exitosamente", trip.getId());
+            notificationService.createAndSendNotification(trip.getDriver().getUser().getId(), NotificationType.OK, "Viaje completado", "El viaje se completó exitosamente", trip.getId());
         } else {
-            tripWebSocketController.sendTripUpdateToBoth(trip, "Waiting for completion confirmation");
+            tripWebSocketController.sendTripUpdateToBoth(trip, "Esperando confirmación de finalización");
         }
 
         tripRepository.save(trip);
         
-        String msg = bothCompleted ? "Trip completed" : "Confirmation received. Waiting for other party.";
+        String msg = bothCompleted ? "Viaje Completado" : "Confirmación recibida. Esperando al otro usuario.";
         return customResponseEntity.getOkResponse(msg, "ok", 200, null);
     }
 
@@ -447,7 +447,7 @@ public class TripService {
         Map<String, Object> resp = new HashMap<>();
         resp.put("trips", out);
         resp.put("totalIncome", income);
-        return customResponseEntity.getOkResponse("History", "ok", 200, resp);
+        return customResponseEntity.getOkResponse("Historial", "ok", 200, resp);
     }
 
     private double calculateFare(String origin, String destination) {

@@ -19,7 +19,7 @@ public class NotificationMessage {
     private String title;
     private String body;
 
-    @JsonFormat(pattern = "dd/MM/yyyy - HH:mm")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
 
     private boolean isRead;

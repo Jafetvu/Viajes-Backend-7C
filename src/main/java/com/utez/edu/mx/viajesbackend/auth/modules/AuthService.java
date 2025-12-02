@@ -16,6 +16,8 @@ import com.utez.edu.mx.viajesbackend.auth.dtos.PasswordResetRequestDto;
 import com.utez.edu.mx.viajesbackend.auth.dtos.VerifyCodeDto;
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfile;
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfileRepository;
+import com.utez.edu.mx.viajesbackend.modules.notification.NotificationService;
+import com.utez.edu.mx.viajesbackend.modules.notification.NotificationType;
 import com.utez.edu.mx.viajesbackend.modules.user.User;
 import com.utez.edu.mx.viajesbackend.modules.user.UserRepository;
 import com.utez.edu.mx.viajesbackend.security.JWTUtil;
@@ -43,6 +45,7 @@ public class AuthService {
     private final JWTUtil jwtUtil;
     private final com.utez.edu.mx.viajesbackend.modules.role.RoleRepository roleRepository;
     private final DriverProfileRepository driverProfileRepository;
+    private final NotificationService notificationService;
     private final SecureRandom random = new SecureRandom();
 
     public AuthService(
@@ -54,7 +57,8 @@ public class AuthService {
             BCryptPasswordEncoder passwordEncoder,
             JWTUtil jwtUtil,
             com.utez.edu.mx.viajesbackend.modules.role.RoleRepository roleRepository,
-            DriverProfileRepository driverProfileRepository) {
+            DriverProfileRepository driverProfileRepository,
+            NotificationService notificationService) {
         this.authManager = authManager;
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
@@ -64,6 +68,7 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
         this.roleRepository = roleRepository;
         this.driverProfileRepository = driverProfileRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -301,6 +306,19 @@ public class AuthService {
 
         user.setPassword(passwordEncoder.encode(dto.newPassword()));
         userRepository.save(user);
+
+        // Enviar notificación de cambio de contraseña
+        try {
+            notificationService.createAndSendNotification(
+                user.getId(),
+                NotificationType.WARN,
+                "Contraseña actualizada",
+                "Tu contraseña ha sido actualizada exitosamente. Si no realizaste este cambio, contacta a soporte inmediatamente.",
+                null
+            );
+        } catch (Exception e) {
+            // Log pero no interrumpir el flujo - el cambio de contraseña fue exitoso
+        }
 
         UserDetailsImpl userDetails = new UserDetailsImpl(user);
         String newToken = jwtUtil.generateToken(userDetails);

@@ -2,7 +2,11 @@ package com.utez.edu.mx.viajesbackend.modules.user;
 
 import com.utez.edu.mx.viajesbackend.modules.user.DTO.PaginatedUsersDTO;
 import com.utez.edu.mx.viajesbackend.modules.user.DTO.UserDTO;
+import com.utez.edu.mx.viajesbackend.modules.notification.NotificationService;
+import com.utez.edu.mx.viajesbackend.modules.notification.NotificationType;
 import com.utez.edu.mx.viajesbackend.utils.CustomResponseEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,11 +24,16 @@ import java.util.Optional;
 @Service
 public class UserService {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+
     @Autowired
     private UserRepository userRepository;
 
     @Autowired
     private CustomResponseEntity customResponseEntity;
+
+    @Autowired
+    private NotificationService notificationService;
 
     // UserDTO para mostrar solamente ciertos datos en las consultas
     public UserDTO transformUserToDTO(User u) {
@@ -177,7 +186,20 @@ public class UserService {
             found.setStatus(user.isStatus());
 
             userRepository.save(found);
-            
+
+            // Enviar notificación de actualización de perfil
+            try {
+                notificationService.createAndSendNotification(
+                    found.getId(),
+                    NotificationType.INFO,
+                    "Perfil actualizado",
+                    "Tu perfil ha sido actualizado exitosamente",
+                    null
+                );
+            } catch (Exception e) {
+                logger.error("Error al enviar notificación de perfil actualizado: {}", e.getMessage());
+            }
+
             // Si cambió el username, generar nuevo token
             String newToken = null;
             if (!found.getUsername().equals(oldUsername)) {

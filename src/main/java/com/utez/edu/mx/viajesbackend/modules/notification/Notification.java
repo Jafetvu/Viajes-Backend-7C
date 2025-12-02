@@ -1,5 +1,6 @@
 package com.utez.edu.mx.viajesbackend.modules.notification;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.utez.edu.mx.viajesbackend.modules.user.User;
 import jakarta.persistence.*;
@@ -51,6 +52,7 @@ public class Notification {
      * Timestamp when the notification was created.
      */
     @Column(name = "created_at", nullable = false)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
 
     /**
@@ -63,6 +65,7 @@ public class Notification {
      * Timestamp when the notification was read by the user.
      */
     @Column(name = "read_at")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime readAt;
 
     /**

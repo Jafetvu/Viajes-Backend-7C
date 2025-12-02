@@ -2,6 +2,8 @@ package com.utez.edu.mx.viajesbackend.modules.rating;
 
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfile;
 import com.utez.edu.mx.viajesbackend.modules.driver.Profile.DriverProfileRepository;
+import com.utez.edu.mx.viajesbackend.modules.notification.NotificationService;
+import com.utez.edu.mx.viajesbackend.modules.notification.NotificationType;
 import com.utez.edu.mx.viajesbackend.modules.rating.DTO.RatingRequestDTO;
 import com.utez.edu.mx.viajesbackend.modules.rating.DTO.RatingResponseDTO;
 import com.utez.edu.mx.viajesbackend.modules.trip.Trip;
@@ -11,6 +13,8 @@ import com.utez.edu.mx.viajesbackend.modules.user.User;
 import com.utez.edu.mx.viajesbackend.modules.user.UserRepository;
 import com.utez.edu.mx.viajesbackend.utils.CustomResponseEntity;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -24,22 +28,27 @@ import java.util.*;
 @Service
 public class RatingService {
 
+    private static final Logger logger = LoggerFactory.getLogger(RatingService.class);
+
     private final RatingRepository ratingRepository;
     private final TripRepository tripRepository;
     private final UserRepository userRepository;
     private final DriverProfileRepository driverProfileRepository;
     private final CustomResponseEntity customResponseEntity;
+    private final NotificationService notificationService;
 
     public RatingService(RatingRepository ratingRepository,
                          TripRepository tripRepository,
                          UserRepository userRepository,
                          DriverProfileRepository driverProfileRepository,
-                         CustomResponseEntity customResponseEntity) {
+                         CustomResponseEntity customResponseEntity,
+                         NotificationService notificationService) {
         this.ratingRepository = ratingRepository;
         this.tripRepository = tripRepository;
         this.userRepository = userRepository;
         this.driverProfileRepository = driverProfileRepository;
         this.customResponseEntity = customResponseEntity;
+        this.notificationService = notificationService;
     }
 
     /**
@@ -84,6 +93,28 @@ public class RatingService {
         rating.setComment(dto.getComment());
         rating.setCreatedAt(LocalDateTime.now());
         ratingRepository.save(rating);
+
+        // Enviar notificación al conductor que recibió la calificación
+        try {
+            String mensaje = String.format(
+                "Has recibido una nueva calificación de %d estrella%s de parte de %s %s",
+                dto.getRating(),
+                dto.getRating() == 1 ? "" : "s",
+                rater.getName(),
+                rater.getSurname()
+            );
+
+            notificationService.createAndSendNotification(
+                rated.getId(),
+                NotificationType.OK,
+                "Nueva calificación recibida",
+                mensaje,
+                trip.getId()
+            );
+        } catch (Exception e) {
+            logger.error("Error al enviar notificación de calificación: {}", e.getMessage());
+        }
+
         return customResponseEntity.getOkResponse("Calificación registrada", "ok", 200, null);
     }
 
@@ -136,6 +167,26 @@ public class RatingService {
         rating.setComment(dto.getComment());
         rating.setCreatedAt(LocalDateTime.now());
         ratingRepository.save(rating);
+
+        // Enviar notificación al cliente que recibió la calificación
+        try {
+            String mensaje = String.format(
+                "Has recibido una nueva calificación de %d estrella%s de parte de tu conductor",
+                dto.getRating(),
+                dto.getRating() == 1 ? "" : "s"
+            );
+
+            notificationService.createAndSendNotification(
+                rated.getId(),
+                NotificationType.OK,
+                "Nueva calificación recibida",
+                mensaje,
+                trip.getId()
+            );
+        } catch (Exception e) {
+            logger.error("Error al enviar notificación de calificación: {}", e.getMessage());
+        }
+
         return customResponseEntity.getOkResponse("Calificación registrada", "ok", 200, null);
     }
 
